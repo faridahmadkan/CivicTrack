@@ -77,11 +77,14 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::delete('/categories/{category}', [AdminController::class, 'destroyCategory'])->name('categories.destroy');
     Route::get('/departments', [AdminController::class, 'departments'])->name('departments');
     Route::post('/departments', [AdminController::class, 'storeDepartment'])->name('departments.store');
+    Route::put('/departments/{department}', [AdminController::class, 'updateDepartment'])->name('departments.update');
+    Route::delete('/departments/{department}', [AdminController::class, 'destroyDepartment'])->name('departments.destroy');
     Route::get('/reports', [AdminController::class, 'reports'])->name('reports.index');
     Route::get('/reports/{report}', [AdminController::class, 'showReport'])->name('reports.show');
     Route::post('/reports/{report}/approve', [AdminController::class, 'approve'])->name('reports.approve');
     Route::post('/reports/{report}/reject', [AdminController::class, 'reject'])->name('reports.reject');
     Route::post('/reports/{report}/assign', [AdminController::class, 'assign'])->name('reports.assign');
+    Route::post('/reports/{report}/reopen', [AdminController::class, 'reopen'])->name('reports.reopen');
     Route::get('/feedback', [AdminController::class, 'feedback'])->name('feedback');
 });
 

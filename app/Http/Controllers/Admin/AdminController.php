@@ -220,6 +220,42 @@ class AdminController extends Controller
         return back()->with('status', 'Report assigned.');
     }
 
+    public function reopen(Request $request, Report $report)
+    {
+        abort_unless($report->status === 'resolved', 403);
+        $data = $request->validate(['notes' => ['nullable', 'string', 'max:2000']]);
+
+        DB::transaction(function () use ($request, $report, $data) {
+            $this->changeStatus($request->user(), $report, 'approved', $data['notes'] ?? 'Report reopened for further action.');
+            $report->citizen->notify(new SystemNotification('Your report '.$report->reference_number.' has been reopened.', route('citizen.reports.show', $report)));
+            User::where('role', 'admin')->get()->each(
+                fn (User $admin) => $admin->notify(new SystemNotification('Report '.$report->reference_number.' was reopened.', route('admin.reports.show', $report)))
+            );
+        });
+
+        return back()->with('status', 'Report reopened.');
+    }
+
+    public function updateDepartment(Request $request, Department $department)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255', 'unique:departments,name,'.$department->id],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'contact_email' => ['nullable', 'email', 'max:255'],
+        ]);
+        $department->update($data);
+
+        return back()->with('status', 'Department updated.');
+    }
+
+    public function destroyDepartment(Department $department)
+    {
+        abort_if($department->reports()->exists(), 422, 'A department with reports cannot be deleted.');
+        $department->delete();
+
+        return back()->with('status', 'Department deleted.');
+    }
+
     public function feedback()
     {
         return view('admin.feedback', ['feedback' => Feedback::with(['report', 'citizen'])->latest()->paginate(15)]);

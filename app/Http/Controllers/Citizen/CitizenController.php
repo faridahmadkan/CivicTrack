@@ -111,7 +111,7 @@ class CitizenController extends Controller
     public function show(Request $request, Report $report)
     {
         $this->authorize('view', $report);
-        $report->load(['category', 'attachments', 'statusHistories.updater', 'progressUpdates.attachments', 'feedback']);
+        $report->load(['category', 'attachments', 'statusHistories.updater', 'publicProgressUpdates.attachments', 'feedback']);
 
         return view('citizen.reports.show', compact('report'));
     }

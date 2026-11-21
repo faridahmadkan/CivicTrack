@@ -58,6 +58,11 @@ class Report extends Model
         return $this->hasMany(ProgressUpdate::class);
     }
 
+    public function publicProgressUpdates()
+    {
+        return $this->hasMany(ProgressUpdate::class)->where('is_internal', false);
+    }
+
     public function feedback()
     {
         return $this->hasOne(Feedback::class);
