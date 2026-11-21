@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\Auth\AuthController;
 use App\Models\Category;
 use App\Models\Report;
@@ -10,6 +11,18 @@ use App\Http\Controllers\Citizen\CitizenController;
 use App\Http\Controllers\Shared\NotificationController;
 use App\Http\Controllers\Staff\StaffController;
 use App\Http\Controllers\Shared\ProfileController;
+
+// Serve private-disk attachments through the authorized file route.
+// The web group runs FileAccessAuthorization before this closure streams the file.
+Route::get('/storage/{path}', function (Illuminate\Http\Request $request, string $path) {
+    abort_unless(preg_match('#^(report-attachments|progress-attachments|profile-photos)/[A-Za-z0-9._-]+$#', $path), 404);
+    abort_unless(Storage::disk('local')->exists($path), 404);
+
+    return Storage::disk('local')->serve($request, $path, headers: [
+        'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+        'Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+    ]);
+})->where('path', '.*')->name('storage.file');
 
 Route::get('/', function () {
     return view('public.home', [

@@ -80,7 +80,7 @@ class StaffController extends Controller
                 'is_internal' => $request->boolean('is_internal'),
             ]);
             foreach ($request->file('evidence', []) as $file) {
-                $path = $file->store('progress-attachments', 'public');
+                $path = $file->store('progress-attachments', 'local');
                 $progress->attachments()->create([
                     'file_path' => $path,
                     'original_name' => $file->getClientOriginalName(),
@@ -121,7 +121,7 @@ class StaffController extends Controller
             ]);
             foreach ($request->file('completion_photos') as $file) {
                 $progress->attachments()->create([
-                    'file_path' => $file->store('progress-attachments', 'public'),
+                    'file_path' => $file->store('progress-attachments', 'local'),
                     'original_name' => $file->getClientOriginalName(),
                 ]);
             }

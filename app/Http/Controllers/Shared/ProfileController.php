@@ -30,7 +30,7 @@ class ProfileController extends Controller
             $user->password = Hash::make($data['password']);
         }
         if ($request->hasFile('profile_photo')) {
-            $user->profile_photo = $request->file('profile_photo')->store('profile-photos', 'public');
+            $user->profile_photo = $request->file('profile_photo')->store('profile-photos', 'local');
         }
         $user->save();
 

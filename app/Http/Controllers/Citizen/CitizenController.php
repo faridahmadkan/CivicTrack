@@ -85,7 +85,7 @@ class CitizenController extends Controller
             ]);
 
             foreach ($request->file('photos') as $photo) {
-                $path = $photo->store('report-attachments', 'public');
+                $path = $photo->store('report-attachments', 'local');
                 $report->attachments()->create([
                     'uploaded_by' => $request->user()->id,
                     'file_path' => $path,

@@ -8,7 +8,9 @@ use App\Models\Category;
 use App\Models\Department;
 use App\Models\Feedback;
 use App\Models\ProgressUpdate;
+use App\Models\ProgressAttachment;
 use App\Models\Report;
+use App\Models\ReportAttachment;
 use App\Models\ReportStatusHistory;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
@@ -18,7 +20,64 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Primary Administrator - Farid Ahmad Khan
+        // ============================================================
+        // 1. CLEAN UP NON-AFGHAN DEMO DATA (preserve primary admin)
+        // ============================================================
+
+        // Identify primary admin (must be preserved)
+        $primaryAdminEmail = 'farid@civictrack.com';
+        $primaryAdmin = User::where('email', $primaryAdminEmail)->first();
+
+        // Delete old demo data in reverse dependency order
+        // Find reports by old Bangladeshi citizens/staff
+        $oldCitizenEmails = ['samir@civictrack.local', 'tania@civictrack.local', 'rafi@civictrack.local', 'maya@civictrack.local'];
+        $oldStaffEmails = ['aisha.staff@civictrack.local', 'kabir.staff@civictrack.local', 'nila.staff@civictrack.local'];
+        $oldAdminEmail = 'admin@civictrack.local';
+
+        $oldCitizenIds = User::whereIn('email', $oldCitizenEmails)->pluck('id');
+        $oldStaffIds = User::whereIn('email', $oldStaffEmails)->pluck('id');
+        $oldAdminId = User::where('email', $oldAdminEmail)->value('id');
+
+        // Get report IDs associated with old citizens
+        $oldReportIds = Report::whereIn('citizen_id', $oldCitizenIds)->pluck('id');
+
+        // Clean up dependent records
+        if ($oldReportIds->isNotEmpty()) {
+            ProgressAttachment::whereHas('progressUpdate', function ($q) use ($oldReportIds) {
+                $q->whereIn('report_id', $oldReportIds);
+            })->delete();
+
+            ProgressUpdate::whereIn('report_id', $oldReportIds)->delete();
+            ReportAttachment::whereIn('report_id', $oldReportIds)->delete();
+            Feedback::whereIn('report_id', $oldReportIds)->delete();
+            Assignment::whereIn('report_id', $oldReportIds)->delete();
+            ReportStatusHistory::whereIn('report_id', $oldReportIds)->delete();
+            Report::whereIn('id', $oldReportIds)->delete();
+        }
+
+        // Clean up assignments by old staff
+        $oldAssignmentIds = Assignment::whereIn('staff_id', $oldStaffIds)->pluck('id');
+        if ($oldAssignmentIds->isNotEmpty()) {
+            ProgressAttachment::whereHas('progressUpdate', function ($q) use ($oldAssignmentIds) {
+                $q->whereIn('report_id', Assignment::whereIn('id', $oldAssignmentIds)->pluck('report_id'));
+            })->delete();
+
+            ProgressUpdate::whereIn('report_id', Assignment::whereIn('id', $oldAssignmentIds)->pluck('report_id'))->delete();
+            Assignment::whereIn('id', $oldAssignmentIds)->delete();
+        }
+
+        // Clean up progress updates by old staff
+        ProgressUpdate::whereIn('staff_id', $oldStaffIds)->delete();
+
+        // Delete old users (non-primary admin, old staff, old citizens)
+        User::whereIn('email', [...$oldCitizenEmails, ...$oldStaffEmails, $oldAdminEmail])->delete();
+
+        // Delete old departments (keep only Afghan-context ones)
+        Department::whereIn('contact_email', ['works@civictrack.local', 'sanitation@civictrack.local', 'utilities@civictrack.local'])->delete();
+
+        // ============================================================
+        // 2. PRIMARY ADMINISTRATOR - Farid Ahmad Khan (PRESERVED)
+        // ============================================================
         $admin = User::firstOrCreate(
             ['email' => 'farid@civictrack.com'],
             [
@@ -30,7 +89,9 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Staff members with Afghan names
+        // ============================================================
+        // 3. STAFF MEMBERS (Afghan names, @civictrack.com domain)
+        // ============================================================
         $staffData = [
             ['name' => 'Ahmad Wali', 'email' => 'ahmad.wali@civictrack.com'],
             ['name' => 'Mohammad Zahir', 'email' => 'mohammad.zahir@civictrack.com'],
@@ -53,7 +114,9 @@ class DatabaseSeeder extends Seeder
             ]
         ));
 
-        // Citizens with Afghan names
+        // ============================================================
+        // 4. CITIZENS (Afghan names, @civictrack.com domain)
+        // ============================================================
         $citizenData = [
             ['name' => 'Ahmad Wali', 'email' => 'ahmad.wali.citizen@civictrack.com'],
             ['name' => 'Mohammad Zahir', 'email' => 'mohammad.zahir.citizen@civictrack.com'],
@@ -78,7 +141,9 @@ class DatabaseSeeder extends Seeder
             ]
         ));
 
-        // Categories relevant to Afghan context
+        // ============================================================
+        // 5. CATEGORIES
+        // ============================================================
         $categoryNames = [
             'Roads and Transportation',
             'Waste Management',
@@ -98,7 +163,9 @@ class DatabaseSeeder extends Seeder
             ]
         ));
 
-        // Departments with Afghan context
+        // ============================================================
+        // 6. DEPARTMENTS (Afghan context)
+        // ============================================================
         $departmentsData = [
             ['name' => 'Kabul Municipal Services Department', 'contact_email' => 'municipal@civictrack.com', 'description' => 'Handles roads, infrastructure, and public works in Kabul.'],
             ['name' => 'Public Works Department', 'contact_email' => 'publicworks@civictrack.com', 'description' => 'Manages construction and maintenance of public infrastructure.'],
@@ -116,7 +183,9 @@ class DatabaseSeeder extends Seeder
             ]
         ));
 
-        // Afghan locations (Kabul neighborhoods/districts)
+        // ============================================================
+        // 7. AFGHAN LOCATIONS
+        // ============================================================
         $locations = [
             'Shahr-e-Naw, Kabul',
             'Karte Seh, Kabul',
@@ -135,7 +204,9 @@ class DatabaseSeeder extends Seeder
             'Jalalabad Center, Jalalabad',
         ];
 
-        // Realistic report titles for Afghan context
+        // ============================================================
+        // 8. REALISTIC REPORT TITLES (Afghan context)
+        // ============================================================
         $titles = [
             'Large pothole on main road near Shahr-e-Naw intersection',
             'Garbage pile accumulating outside local market in Karte Seh',
@@ -169,7 +240,6 @@ class DatabaseSeeder extends Seeder
             $department = $departments[$index % $departments->count()];
             $priority = $priorities[$index % count($priorities)];
 
-            // Use a fixed date for consistent reference numbers
             $baseDate = now()->subDays(count($titles) - $index);
             $referenceNumber = 'CT-'.$baseDate->format('Ymd').'-'.str_pad((string) ($index + 1), 4, '0', STR_PAD_LEFT);
 

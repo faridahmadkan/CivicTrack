@@ -75,7 +75,7 @@ class CivicTrackTest extends TestCase
 
     public function test_citizen_can_create_report_with_valid_photo(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $citizen = User::factory()->create(['role' => 'citizen']);
         $category = Category::create(['name' => 'Roads', 'slug' => 'roads', 'is_active' => true]);
 
@@ -97,7 +97,7 @@ class CivicTrackTest extends TestCase
 
     public function test_invalid_image_is_rejected(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $citizen = User::factory()->create(['role' => 'citizen']);
         $category = Category::create(['name' => 'Roads', 'slug' => 'roads', 'is_active' => true]);
 
