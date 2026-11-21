@@ -1,0 +1,9 @@
+@extends('layouts.dashboard')
+@section('sidebar')
+<a class="nav-link" href="{{ route('admin.dashboard') }}"><i class="bi bi-grid me-2"></i>Dashboard</a><a class="nav-link" href="{{ route('admin.reports.index') }}"><i class="bi bi-file-earmark-text me-2"></i>Reports</a><a class="nav-link active" href="{{ route('admin.categories') }}"><i class="bi bi-tags me-2"></i>Categories</a><a class="nav-link" href="{{ route('admin.departments') }}"><i class="bi bi-building me-2"></i>Departments</a><a class="nav-link" href="{{ route('admin.users') }}"><i class="bi bi-people me-2"></i>Users</a>
+@endsection
+@section('content')
+<h1 class="h3 text-navy mb-4">Issue Categories</h1>
+<div class="row g-4"><div class="col-lg-4"><div class="card border-0 shadow-sm"><div class="card-body"><h2 class="h6">Add Category</h2><form method="POST" action="{{ route('admin.categories.store') }}">@csrf<input name="name" class="form-control mb-2" placeholder="Category name" required><textarea name="description" class="form-control mb-2" rows="3" placeholder="Description"></textarea><button class="btn btn-emerald w-100">Create</button></form></div></div></div>
+<div class="col-lg-8"><div class="card border-0 shadow-sm"><div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Name</th><th>Status</th><th></th></tr></thead><tbody>@foreach($categories as $category)<tr><td>{{ $category->name }}</td><td>{{ $category->is_active?'Active':'Inactive' }}</td><td><form method="POST" action="{{ route('admin.categories.update',$category) }}" class="d-flex gap-2">@csrf @method('PUT')<input type="hidden" name="name" value="{{ $category->name }}"><input type="hidden" name="is_active" value="{{ $category->is_active?0:1 }}"><button class="btn btn-sm btn-outline-secondary">{{ $category->is_active?'Deactivate':'Activate' }}</button></form></td></tr>@endforeach</tbody></table></div></div></div></div>
+@endsection

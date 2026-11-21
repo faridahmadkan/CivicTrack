@@ -1,0 +1,7 @@
+@extends('layouts.dashboard')
+@section('sidebar')
+<a class="nav-link" href="{{ route('admin.dashboard') }}"><i class="bi bi-grid me-2"></i>Dashboard</a><a class="nav-link" href="{{ route('admin.reports.index') }}"><i class="bi bi-file-earmark-text me-2"></i>Reports</a><a class="nav-link" href="{{ route('admin.categories') }}"><i class="bi bi-tags me-2"></i>Categories</a><a class="nav-link active" href="{{ route('admin.departments') }}"><i class="bi bi-building me-2"></i>Departments</a><a class="nav-link" href="{{ route('admin.users') }}"><i class="bi bi-people me-2"></i>Users</a>
+@endsection
+@section('content')
+<h1 class="h3 text-navy mb-4">Departments</h1><div class="row g-4"><div class="col-lg-4"><div class="card border-0 shadow-sm"><div class="card-body"><form method="POST" action="{{ route('admin.departments.store') }}">@csrf<input name="name" class="form-control mb-2" placeholder="Department name" required><input type="email" name="contact_email" class="form-control mb-2" placeholder="Contact email"><textarea name="description" class="form-control mb-2" rows="3"></textarea><button class="btn btn-emerald w-100">Create Department</button></form></div></div></div><div class="col-lg-8"><div class="card border-0 shadow-sm"><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Name</th><th>Contact</th></tr></thead><tbody>@foreach($departments as $department)<tr><td>{{ $department->name }}</td><td>{{ $department->contact_email }}</td></tr>@endforeach</tbody></table></div></div></div></div>
+@endsection

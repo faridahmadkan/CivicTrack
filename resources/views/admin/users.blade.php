@@ -1,0 +1,8 @@
+@extends('layouts.dashboard')
+@section('sidebar')
+<a class="nav-link" href="{{ route('admin.dashboard') }}"><i class="bi bi-grid me-2"></i>Dashboard</a><a class="nav-link" href="{{ route('admin.reports.index') }}"><i class="bi bi-file-earmark-text me-2"></i>Reports</a><a class="nav-link" href="{{ route('admin.categories') }}"><i class="bi bi-tags me-2"></i>Categories</a><a class="nav-link" href="{{ route('admin.departments') }}"><i class="bi bi-building me-2"></i>Departments</a><a class="nav-link active" href="{{ route('admin.users') }}"><i class="bi bi-people me-2"></i>Users</a>
+@endsection
+@section('content')
+<div class="d-flex justify-content-between mb-4"><h1 class="h3 text-navy">User Management</h1><a class="btn btn-emerald" href="{{ route('admin.users.create-staff') }}">Create Staff</a></div><form class="mb-3" method="GET"><div class="input-group"><input name="search" value="{{ request('search') }}" class="form-control" placeholder="Search users"><button class="btn btn-outline-secondary">Search</button></div></form>
+<div class="card border-0 shadow-sm"><div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>@foreach($users as $user)<tr><td>{{ $user->name }}</td><td>{{ $user->email }}</td><td>{{ ucfirst($user->role) }}</td><td>{{ $user->is_active?'Active':'Inactive' }}</td><td>@if(!($user->isAdmin()&&$user->id===auth()->id()))<form method="POST" action="{{ route('admin.users.toggle',$user) }}">@csrf<button class="btn btn-sm btn-outline-secondary">{{ $user->is_active?'Deactivate':'Activate' }}</button></form>@endif</td></tr>@endforeach</tbody></table></div></div><div class="mt-3">{{ $users->links() }}</div>
+@endsection

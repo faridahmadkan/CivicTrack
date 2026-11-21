@@ -1,0 +1,16 @@
+@extends('layouts.dashboard')
+@section('sidebar')
+<a class="nav-link" href="{{ route('staff.dashboard') }}"><i class="bi bi-grid me-2"></i>Dashboard</a><a class="nav-link active" href="{{ route('staff.assignments.index') }}"><i class="bi bi-clipboard-check me-2"></i>Assignments</a>
+@endsection
+@section('content')
+<h1 class="h3 text-navy">{{ $assignment->report->title }}</h1><p class="text-muted">{{ $assignment->report->reference_number }} — {{ str_replace('_',' ', $assignment->report->status) }}</p>
+<div class="row g-4"><div class="col-lg-8">
+<div class="card border-0 shadow-sm mb-4"><div class="card-body"><h2 class="h6">Assignment Details</h2><p>{{ $assignment->report->description }}</p><dl class="row mb-0"><dt class="col-sm-3">Location</dt><dd class="col-sm-9">{{ $assignment->report->location }}</dd><dt class="col-sm-3">Category</dt><dd class="col-sm-9">{{ $assignment->report->category->name }}</dd><dt class="col-sm-3">Notes</dt><dd class="col-sm-9">{{ $assignment->notes ?: 'None' }}</dd></dl></div></div>
+<div class="card border-0 shadow-sm"><div class="card-header bg-white"><h2 class="h6 mb-0">Progress History</h2></div><div class="list-group list-group-flush">@forelse($assignment->report->progressUpdates as $update)<div class="list-group-item"><p class="mb-1">{{ $update->description }}</p><small class="text-muted">{{ $update->created_at->diffForHumans() }}{{ $update->is_internal?' — Internal note':'' }}</small></div>@empty<div class="list-group-item text-muted">No progress updates.</div>@endforelse</div></div>
+</div><div class="col-lg-4">
+@if(!in_array($assignment->report->status,['resolved','rejected','cancelled']))
+<div class="card border-0 shadow-sm mb-3"><div class="card-body"><h2 class="h6">Add Progress Update</h2><form method="POST" action="{{ route('staff.assignments.progress',$assignment) }}" enctype="multipart/form-data">@csrf<textarea name="description" class="form-control mb-2" rows="4" required></textarea><input type="file" name="evidence[]" class="form-control mb-2" accept="image/jpeg,image/png,image/webp" multiple><div class="form-check mb-3"><input type="checkbox" name="is_internal" value="1" class="form-check-input" id="internal"><label class="form-check-label" for="internal">Internal administrative note</label></div><button class="btn btn-emerald w-100">Add Update</button></form></div></div>
+<div class="card border-0 shadow-sm"><div class="card-body"><h2 class="h6">Mark as Resolved</h2><form method="POST" action="{{ route('staff.assignments.resolve',$assignment) }}" enctype="multipart/form-data">@csrf<textarea name="resolution_details" class="form-control mb-2" rows="4" required></textarea><input type="file" name="completion_photos[]" class="form-control mb-2" accept="image/jpeg,image/png,image/webp" multiple required><button class="btn btn-outline-success w-100">Submit Resolution</button></form></div></div>
+@endif
+</div></div>
+@endsection

@@ -1,0 +1,35 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+:root {
+    --navy: #0b1f33;
+    --emerald: #0c8f70;
+}
+
+.bg-navy { background-color: var(--navy) !important; }
+.text-navy { color: var(--navy) !important; }
+.bg-emerald { background-color: var(--emerald) !important; }
+.text-emerald { color: var(--emerald) !important; }
+.btn-emerald { background-color: var(--emerald); border-color: var(--emerald); color: #fff; }
+.btn-emerald:hover { background-color: #08785d; border-color: #08785d; color: #fff; }
+.hero-section { background: linear-gradient(135deg, var(--navy), #123d56); }
+.min-vh-50 { min-height: 50vh; }
+.dashboard-shell { min-height: calc(100vh - 56px); }
+.dashboard-sidebar { width: 260px; background: var(--navy); min-height: 100vh; }
+.dashboard-sidebar .nav-link { color: #cbd5df; border-radius: 8px; margin-bottom: 4px; }
+.dashboard-sidebar .nav-link:hover, .dashboard-sidebar .nav-link.active { background: rgba(255,255,255,.1); color: #fff; }
+.stat-card { border: 0; border-left: 4px solid var(--emerald); box-shadow: 0 .25rem 1rem rgba(11,31,51,.08); }
+.table thead th { background: #f8fafc; color: #526274; }
+.status-badge { text-transform: capitalize; }
+@media (max-width: 991.98px) {
+    .dashboard-sidebar { width: 100%; min-height: auto; }
+}
