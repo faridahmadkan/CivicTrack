@@ -1,39 +1,32 @@
 @extends('layouts.public')
 @section('content')
-<header class="hero-section text-white">
-    <div class="container py-5">
-        <div class="row align-items-center min-vh-50 py-5">
-            <div class="col-lg-7">
-                <span class="badge bg-emerald mb-3">Community-powered accountability</span>
-                <h1 class="display-4 fw-bold">Make your community better, one report at a time.</h1>
-                <p class="lead my-4">Report local issues, track progress, and stay informed as civic teams resolve problems.</p>
-                <a href="{{ route('register') }}" class="btn btn-emerald btn-lg me-2">Submit a Report</a>
-                <a href="{{ route('how-it-works') }}" class="btn btn-outline-light btn-lg">See How It Works</a>
-            </div>
-        </div>
-    </div>
-</header>
-<section class="py-5">
-    <div class="container">
-        <div class="row g-4 text-center">
-            <div class="col-md-4"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><h2 class="text-navy">{{ number_format($stats['reports']) }}</h2><p class="mb-0">Community reports</p></div></div></div>
-            <div class="col-md-4"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><h2 class="text-navy">{{ number_format($stats['resolved']) }}</h2><p class="mb-0">Issues resolved</p></div></div></div>
-            <div class="col-md-4"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><h2 class="text-navy">{{ number_format($stats['citizens']) }}</h2><p class="mb-0">Registered citizens</p></div></div></div>
-        </div>
-    </div>
-</section>
-<section class="py-5">
-    <div class="container">
-        <h2 class="fw-bold text-navy mb-4">What can you report?</h2>
-        <div class="row g-3">
-            @foreach($categories as $category)
-            <div class="col-sm-6 col-lg-3">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body"><i class="bi bi-pin-map text-emerald fs-3"></i><h6 class="fw-bold mt-3 mb-1">{{ $category->name }}</h6><p class="small text-muted mb-0">{{ $category->description }}</p></div>
-                </div>
-            </div>
-            @endforeach
-        </div>
-    </div>
-</section>
+<header class="hero-section"><div class="container py-5"><div class="row align-items-center g-5 py-lg-5 py-4">
+<div class="col-lg-7 py-lg-4"><div class="hero-kicker mb-4"><i class="bi bi-people"></i> COMMUNITY-POWERED ACCOUNTABILITY</div>
+<h1>Better communities start with being heard.</h1>
+<p class="lead my-4">Spot a problem in your neighborhood? Share it with the right people, follow every update, and see how local issues move toward resolution.</p>
+<div class="d-flex flex-wrap gap-3"><a href="{{ route('register') }}" class="btn btn-emerald btn-lg">Report a community issue <i class="bi bi-arrow-up-right ms-2"></i></a><a href="{{ route('how-it-works') }}" class="btn btn-outline-light btn-lg">How it works</a></div>
+<div class="d-flex flex-wrap gap-4 mt-5 small" style="color:rgba(255,255,255,.72)"><span><i class="bi bi-check-circle me-2" style="color:#a9dfbd"></i>Simple reporting</span><span><i class="bi bi-eye me-2" style="color:#a9dfbd"></i>Progress you can follow</span><span><i class="bi bi-chat-dots me-2" style="color:#a9dfbd"></i>Clear updates</span></div></div>
+<div class="col-lg-5 d-none d-lg-block"><div class="hero-panel">
+<div class="d-flex justify-content-between align-items-center mb-3"><div><div class="small text-secondary fw-semibold">CIVICTRACK WORKSPACE</div><div class="fw-bold fs-5">A clearer view of progress</div></div><span class="badge rounded-pill" style="background:#e6f2eb;color:#176b52">Workflow preview</span></div>
+<div class="mini-row"><span class="mini-icon"><i class="bi bi-cone-striped"></i></span><div class="flex-grow-1"><div class="fw-bold small">Road maintenance</div><div class="text-secondary small">Report received</div></div><i class="bi bi-check-circle-fill text-success"></i></div>
+<div class="mini-row"><span class="mini-icon"><i class="bi bi-droplet"></i></span><div class="flex-grow-1"><div class="fw-bold small">Water supply concern</div><div class="text-secondary small">Under review</div></div><span class="badge text-bg-warning">Review</span></div>
+<div class="mini-row"><span class="mini-icon"><i class="bi bi-trash3"></i></span><div class="flex-grow-1"><div class="fw-bold small">Waste collection</div><div class="text-secondary small">Work in progress</div></div><span class="badge text-bg-info">Active</span></div>
+<div class="pt-3 mt-2 border-top"><div class="d-flex justify-content-between small mb-2"><span class="text-secondary">A transparent process</span><span class="fw-bold" style="color:#176b52">Report to resolution</span></div><div class="progress" style="height:6px"><div class="progress-bar" style="width:68%;background:#27815f"></div></div></div>
+<div class="small text-secondary mt-3"><i class="bi bi-info-circle me-1"></i>Illustrative workflow preview, not live report data.</div>
+</div></div></div></div></header>
+<section class="py-5"><div class="container py-lg-3"><div class="row g-3">
+<div class="col-md-4"><div class="card h-100"><div class="card-body p-4"><div class="stat-icon mb-3"><i class="bi bi-file-earmark-text"></i></div><div class="display-6 fw-bold">{{ number_format($stats['reports']) }}</div><div class="text-secondary fw-semibold">Reports submitted</div><div class="small text-secondary mt-2">Community issues recorded in CivicTrack</div></div></div></div>
+<div class="col-md-4"><div class="card h-100"><div class="card-body p-4"><div class="stat-icon mb-3"><i class="bi bi-check2-circle"></i></div><div class="display-6 fw-bold">{{ number_format($stats['resolved']) }}</div><div class="text-secondary fw-semibold">Reports resolved</div><div class="small text-secondary mt-2">Issues marked as resolved in the system</div></div></div></div>
+<div class="col-md-4"><div class="card h-100"><div class="card-body p-4"><div class="stat-icon mb-3"><i class="bi bi-people"></i></div><div class="display-6 fw-bold">{{ number_format($stats['citizens']) }}</div><div class="text-secondary fw-semibold">Citizen accounts</div><div class="small text-secondary mt-2">People registered to report local issues</div></div></div></div>
+</div></div></section>
+<section class="py-5" style="background:#fff"><div class="container py-lg-4">
+<div class="row align-items-end mb-4 g-3"><div class="col-lg-7"><div class="section-eyebrow mb-2">A practical way to take action</div><h2 class="section-title mb-2">From a local concern to a tracked response.</h2><p class="section-copy mb-0">CivicTrack gives residents and civic teams a shared place to report problems, coordinate work, and understand what happens next.</p></div><div class="col-lg-5 text-lg-end"><a href="{{ route('how-it-works') }}" class="btn btn-outline-secondary">Explore the process <i class="bi bi-arrow-right ms-1"></i></a></div></div>
+<div class="row g-4">
+<div class="col-md-4"><div class="h-100 p-4 rounded-4" style="background:#f5f8f5"><div class="section-eyebrow mb-3">01 / REPORT</div><div class="stat-icon mb-3"><i class="bi bi-camera"></i></div><h3 class="h5 fw-bold">Describe what needs attention</h3><p class="text-secondary mb-0">Share the issue, its location, and supporting photos so the right team has useful context.</p></div></div>
+<div class="col-md-4"><div class="h-100 p-4 rounded-4" style="background:#f5f8f5"><div class="section-eyebrow mb-3">02 / COORDINATE</div><div class="stat-icon mb-3"><i class="bi bi-clipboard2-check"></i></div><h3 class="h5 fw-bold">Follow review and assignment</h3><p class="text-secondary mb-0">Reports can be reviewed, assigned to responsible staff, and updated as work progresses.</p></div></div>
+<div class="col-md-4"><div class="h-100 p-4 rounded-4" style="background:#f5f8f5"><div class="section-eyebrow mb-3">03 / TRACK</div><div class="stat-icon mb-3"><i class="bi bi-activity"></i></div><h3 class="h5 fw-bold">Stay informed at every stage</h3><p class="text-secondary mb-0">Check the report timeline and see status changes and progress updates in one place.</p></div></div>
+</div></div></section>
+<section class="py-5"><div class="container py-lg-4"><div class="section-eyebrow mb-2">Community priorities</div><h2 class="section-title mb-2">What needs attention in your area?</h2><p class="section-copy mb-4">Choose the category that best describes the issue you want to report.</p>
+<div class="row g-3">@forelse($categories as $category)<div class="col-sm-6 col-lg-3"><div class="card h-100"><div class="card-body p-4"><div class="stat-icon mb-3"><i class="bi bi-geo-alt"></i></div><h3 class="h6 fw-bold mb-2">{{ $category->name }}</h3><p class="small text-secondary mb-0">{{ $category->description }}</p></div></div></div>@empty<div class="col-12"><div class="alert alert-light border mb-0">Issue categories will appear here when they are configured.</div></div>@endforelse</div></div></section>
+<section class="py-5" style="background:#eaf2ed"><div class="container py-3"><div class="row align-items-center g-4"><div class="col-lg-8"><div class="section-eyebrow mb-2">Make your voice count</div><h2 class="section-title mb-2">A small report can be the start of meaningful change.</h2><p class="section-copy mb-0">Create an account to submit a concern and follow its progress through the CivicTrack workflow.</p></div><div class="col-lg-4 text-lg-end"><a href="{{ route('register') }}" class="btn btn-emerald btn-lg">Get started <i class="bi bi-arrow-up-right ms-2"></i></a></div></div></div></section>
 @endsection

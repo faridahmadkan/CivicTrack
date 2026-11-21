@@ -139,16 +139,20 @@ DB_PASSWORD=
 APP_URL=http://127.0.0.1:8000
 ```
 
-Apply schema and demo data (both safe on an existing database — never run `migrate:fresh` against a database with real data):
+Apply schema changes without resetting existing tables. Never run `migrate:fresh`, `migrate:refresh`, or `db:wipe` against a database containing data you need to preserve:
 
 ```powershell
-php artisan migrate          # adds tables and Phase 2 index/constraint migrations
-php artisan db:seed --class=DatabaseSeeder   # idempotent; seeds Afghan-context demo data
+php artisan migrate          # applies pending migrations without dropping existing tables
 npm run build                # compile frontend assets
+
+# Optional demo data: inspect database/seeders/DatabaseSeeder.php first.
+# It preserves farid@civictrack.com but deletes specific legacy @civictrack.local
+# demo users and their related report records. Back up the database before running:
+php artisan db:seed --class=DatabaseSeeder
 php artisan serve --host=127.0.0.1 --port=8000
 ```
 
-The seeder preserves the primary administrator (`farid@civictrack.com`), removes only the legacy Bangladeshi demo records (old `@civictrack.local` users, their reports, and their departments), and uses `firstOrCreate` everywhere so re-running it is safe.
+The seeder preserves the primary administrator (`farid@civictrack.com`) and creates Afghan-context sample data. However, it also deletes specifically listed legacy `@civictrack.local` demo users and related reports, assignments, progress updates, attachments, feedback, histories, and departments. Do not run it on an existing database until you have reviewed those cleanup queries and backed up any data you need. `firstOrCreate` prevents many duplicate demo records but does not make the cleanup operation non-destructive.
 
 ## 15. Configuration
 Key `.env` settings are shown in Section 14. `APP_URL` must match the development server URL for notification links and password reset emails. Cache configuration may remain at the Laravel defaults (`file`/`database`).

@@ -80,10 +80,7 @@ The seeder creates Afghan-context demo data including the primary administrator,
 php artisan db:seed --class=DatabaseSeeder
 ```
 
-**To add demo data to existing database (idempotent, safe to run multiple times):**
-```powershell
-php artisan db:seed --class=DatabaseSeeder
-```
+**Important — existing databases:** The current `DatabaseSeeder` preserves `farid@civictrack.com` and creates missing Afghan-context demo records, but it also deletes specifically identified legacy `@civictrack.local` demo users and their associated reports/records. Review `database/seeders/DatabaseSeeder.php` before running it on a database containing data you need to keep. Back up your database first. Seeding is optional; do not run it merely to apply migrations.
 
 ### 5. Build Frontend Assets
 
@@ -125,7 +122,7 @@ All demo accounts use the `@civictrack.com` domain and are **fictional** for loc
 | Citizen | Zahra Azimi | zahra.azimi@civictrack.com | Citizen@123 |
 | Citizen | Nasir Mustafa | nasir.mustafa@civictrack.com | Citizen@123 |
 
-> **Security Note**: These credentials are for local development only. Never use these passwords in production. The seeder is idempotent — running it multiple times will not create duplicates.
+> **Security Note**: These credentials are for local development only. Never use these passwords in production. The seeder uses `firstOrCreate` for many demo records, but it also performs targeted cleanup of legacy demo records. Review its cleanup section and back up existing data before running it.
 
 ## Afghan Context
 
