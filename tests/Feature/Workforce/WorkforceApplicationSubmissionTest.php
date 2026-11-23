@@ -58,6 +58,14 @@ class WorkforceApplicationSubmissionTest extends TestCase
             'event_key' => 'workforce_application.submitted',
             'subject_id' => $application->id,
         ]);
+        $this->actingAs($applicant)
+            ->get(route('workforce.applications.index', [
+                'q' => $application->application_number,
+                'type' => WorkforceApplicationType::Staff->value,
+                'status' => WorkforceApplicationStatus::Submitted->value,
+            ]))
+            ->assertOk()
+            ->assertSee($application->application_number);
 
         $storedDocument = WorkforceApplicationDocument::query()->firstOrFail();
         Storage::disk('private')->assertExists($storedDocument->storage_path);

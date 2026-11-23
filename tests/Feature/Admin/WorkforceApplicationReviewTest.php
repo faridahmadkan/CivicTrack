@@ -86,6 +86,32 @@ class WorkforceApplicationReviewTest extends TestCase
             ->assertSee(route('admin.workforce-applications.index'));
     }
 
+    public function test_admin_can_search_and_filter_workforce_applications(): void
+    {
+        $this->seed();
+        $administrator = $this->administrator();
+        $applicant = User::factory()->create(['name' => 'Farzana Rahimi']);
+        $application = WorkforceApplication::factory()->staff()->create([
+            'user_id' => $applicant->id,
+            'position_title' => 'Public service coordinator',
+        ]);
+        $unmatchedApplicant = User::factory()->create(['name' => 'Other Applicant']);
+        WorkforceApplication::factory()->worker()->create([
+            'user_id' => $unmatchedApplicant->id,
+            'position_title' => 'Field maintenance worker',
+        ]);
+
+        $this->actingAs($administrator)
+            ->get(route('admin.workforce-applications.index', [
+                'q' => 'Farzana',
+                'type' => 'staff',
+                'status' => WorkforceApplicationStatus::Submitted->value,
+            ]))
+            ->assertOk()
+            ->assertSee($application->application_number)
+            ->assertDontSee('Field maintenance worker');
+    }
+
     public function test_admin_approval_creates_a_worker_role_without_staff_permissions(): void
     {
         $this->seed();

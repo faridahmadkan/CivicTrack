@@ -9,8 +9,10 @@ use App\Http\Requests\ReviewWorkforceApplicationRequest;
 use App\Models\WorkforceApplication;
 use App\Services\WorkforceApplicationService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class WorkforceApplicationController extends Controller
 {
@@ -23,7 +25,13 @@ class WorkforceApplicationController extends Controller
             fn (WorkforceApplicationType $type): bool => $request->user()->can($type->reviewPermission()->value),
         ));
 
-        $selectedType = $request->query('type');
+        $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'type' => ['nullable', Rule::enum(WorkforceApplicationType::class)],
+            'status' => ['nullable', Rule::enum(WorkforceApplicationStatus::class)],
+        ]);
+
+        $selectedType = $filters['type'] ?? null;
         $query = WorkforceApplication::query()
             ->with(['user', 'requestedUnit'])
             ->orderByDesc('submitted_at')
@@ -40,10 +48,27 @@ class WorkforceApplicationController extends Controller
             ));
         }
 
+        if (filled($filters['q'] ?? null)) {
+            $search = '%'.trim($filters['q']).'%';
+            $query->where(static function (Builder $applications) use ($search): void {
+                $applications->where('application_number', 'like', $search)
+                    ->orWhere('position_title', 'like', $search)
+                    ->orWhereHas('user', static function (Builder $users) use ($search): void {
+                        $users->where('name', 'like', $search)
+                            ->orWhere('email', 'like', $search);
+                    });
+            });
+        }
+
+        if (filled($filters['status'] ?? null)) {
+            $query->where('status', $filters['status']);
+        }
+
         return view('admin.workforce-applications.index', [
             'applications' => $query->paginate(20)->withQueryString(),
             'selectedType' => $selectedType,
             'availableTypes' => $availableTypes,
+            'filters' => $filters,
         ]);
     }
 

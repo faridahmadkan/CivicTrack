@@ -86,7 +86,11 @@ class AdminAccountProvisioningTest extends TestCase
             'subject_id' => $worker->id,
         ]);
         $this->actingAs($administrator)
-            ->get(route('admin.accounts.index'))
+            ->get(route('admin.accounts.index', [
+                'q' => 'Field Worker',
+                'role' => RoleName::Worker->value,
+                'status' => 'active',
+            ]))
             ->assertOk()
             ->assertSee('Field Worker Example');
 

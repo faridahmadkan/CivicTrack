@@ -17,6 +17,17 @@
         @endif
     </div>
 
+    <form method="GET" action="{{ route('account.notifications.index') }}" class="mt-6 grid gap-3 rounded-2xl border border-line bg-white p-4 sm:grid-cols-[minmax(14rem,1fr)_14rem_auto_auto] sm:items-end">
+        <label class="text-xs font-semibold text-slate-600">Search notifications
+            <input type="search" name="q" value="{{ $filters['q'] ?? '' }}" maxlength="120" class="mt-1.5 block w-full rounded-lg border border-line px-3 py-2.5 text-sm font-normal text-slate-800" placeholder="Report, task, application, or update">
+        </label>
+        <label class="text-xs font-semibold text-slate-600">Read status
+            <select name="status" class="mt-1.5 block w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm font-normal text-slate-800"><option value="">All notifications</option><option value="unread" @selected(($filters['status'] ?? '') === 'unread')>Unread</option><option value="read" @selected(($filters['status'] ?? '') === 'read')>Read</option></select>
+        </label>
+        <button class="rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-forest-800">Search</button>
+        <a href="{{ route('account.notifications.index') }}" class="rounded-lg border border-line bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-600 hover:bg-sand-50">Clear</a>
+    </form>
+
     <section class="mt-6 space-y-3" aria-label="Account notifications">
         @forelse ($notifications as $notification)
             @php
@@ -50,8 +61,8 @@
             </article>
         @empty
             <div class="rounded-2xl border border-dashed border-line bg-white p-8 text-center sm:p-12">
-                <h2 class="text-base font-semibold text-slate-900">No notifications yet</h2>
-                <p class="mt-2 text-sm leading-6 text-slate-600">Updates will appear here when a service team changes a report, reviews an application, or assigns field work.</p>
+                <h2 class="text-base font-semibold text-slate-900">{{ filled($filters['q'] ?? null) || filled($filters['status'] ?? null) ? 'No notifications match these filters' : 'No notifications yet' }}</h2>
+                <p class="mt-2 text-sm leading-6 text-slate-600">{{ filled($filters['q'] ?? null) || filled($filters['status'] ?? null) ? 'Try another search term or read status.' : 'Updates will appear here when a service team changes a report, reviews an application, or assigns field work.' }}</p>
             </div>
         @endforelse
     </section>

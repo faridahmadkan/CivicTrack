@@ -26,7 +26,20 @@
         </section>
 
         <section>
-            <div class="mb-3 flex items-center justify-between gap-4"><h2 class="text-base font-semibold text-slate-900">Organization directory</h2><span class="text-xs text-slate-500">{{ $organizationUnits->count() }} {{ \Illuminate\Support\Str::plural('unit', $organizationUnits->count()) }}</span></div>
+            <div class="mb-3 flex items-center justify-between gap-4"><h2 class="text-base font-semibold text-slate-900">Organization directory</h2><span class="text-xs text-slate-500">{{ $organizationUnits->total() }} {{ \Illuminate\Support\Str::plural('unit', $organizationUnits->total()) }}</span></div>
+            <form method="GET" action="{{ route('admin.organization-units.index') }}" class="mb-4 grid gap-3 rounded-2xl border border-line bg-white p-4 sm:grid-cols-2 xl:grid-cols-[minmax(12rem,1fr)_12rem_12rem_auto_auto] xl:items-end">
+                <label class="text-xs font-semibold text-slate-600">Search organization units
+                    <input type="search" name="q" value="{{ $filters['q'] ?? '' }}" maxlength="120" class="mt-1.5 block w-full rounded-lg border border-line px-3 py-2.5 text-sm font-normal text-slate-800" placeholder="Name, code, description, or parent">
+                </label>
+                <label class="text-xs font-semibold text-slate-600">Unit type
+                    <select name="type" class="mt-1.5 block w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm font-normal text-slate-800"><option value="">All types</option>@foreach ($unitTypes as $unitType)<option value="{{ $unitType->value }}" @selected(($filters['type'] ?? '') === $unitType->value)>{{ ucfirst($unitType->value) }}</option>@endforeach</select>
+                </label>
+                <label class="text-xs font-semibold text-slate-600">Status
+                    <select name="status" class="mt-1.5 block w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm font-normal text-slate-800"><option value="">All statuses</option><option value="active" @selected(($filters['status'] ?? '') === 'active')>Active</option><option value="inactive" @selected(($filters['status'] ?? '') === 'inactive')>Inactive</option></select>
+                </label>
+                <button class="rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-forest-800">Search units</button>
+                <a href="{{ route('admin.organization-units.index') }}" class="rounded-lg border border-line bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-600 hover:bg-sand-50">Clear</a>
+            </form>
             @forelse ($organizationUnits as $organizationUnit)
                 <article class="mb-3 rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6">
                     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -49,8 +62,11 @@
                     @if ($organizationUnit->description)<p class="mt-3 border-t border-line pt-3 text-xs leading-5 text-slate-500">{{ $organizationUnit->description }}</p>@endif
                 </article>
             @empty
-                <div class="rounded-2xl border border-dashed border-line bg-white px-6 py-12 text-center"><p class="text-sm font-semibold text-slate-800">No organization units yet</p><p class="mt-1 text-sm text-slate-500">Add a department to start structuring the service organization.</p></div>
+                <div class="rounded-2xl border border-dashed border-line bg-white px-6 py-12 text-center"><p class="text-sm font-semibold text-slate-800">{{ filled($filters['q'] ?? null) || filled($filters['type'] ?? null) || filled($filters['status'] ?? null) ? 'No organization units match these filters' : 'No organization units yet' }}</p><p class="mt-1 text-sm text-slate-500">{{ filled($filters['q'] ?? null) || filled($filters['type'] ?? null) || filled($filters['status'] ?? null) ? 'Try another search term, type, or status.' : 'Add a department to start structuring the service organization.' }}</p></div>
             @endforelse
+            @if ($organizationUnits->hasPages())
+                <div class="mt-4">{{ $organizationUnits->links() }}</div>
+            @endif
         </section>
     </div>
 @endsection

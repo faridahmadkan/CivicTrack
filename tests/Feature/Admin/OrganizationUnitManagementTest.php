@@ -32,6 +32,14 @@ class OrganizationUnitManagementTest extends TestCase
 
         $this->assertSame(OrganizationUnitType::Department, $department->unit_type);
         $this->assertSame($administrator->id, $department->created_by);
+        $this->actingAs($administrator)
+            ->get(route('admin.organization-units.index', [
+                'q' => 'Public Works',
+                'type' => OrganizationUnitType::Department->value,
+                'status' => 'active',
+            ]))
+            ->assertOk()
+            ->assertSee('Public Works Department');
 
         $this->actingAs($administrator)->post(route('admin.organization-units.store'), [
             'code' => 'ROADS-DIVISION',

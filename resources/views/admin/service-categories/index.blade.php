@@ -11,7 +11,7 @@
             <h1 class="mt-2 text-3xl font-semibold tracking-tight text-forest-950">Report categories</h1>
             <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Categories define what residents can report and the service unit that receives each report. Reports without a configured destination remain visible in the unassigned triage queue.</p>
         </div>
-        <span class="rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">{{ $categories->count() }} categories</span>
+        <span class="rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">{{ $categories->total() }} categories</span>
     </div>
 
     <div class="mt-7 grid gap-6 xl:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.2fr)]">
@@ -60,6 +60,19 @@
         </section>
 
         <section class="space-y-4" aria-label="Existing service categories">
+            <form method="GET" action="{{ route('admin.service-categories.index') }}" class="grid gap-3 rounded-2xl border border-line bg-white p-4 sm:grid-cols-2 xl:grid-cols-[minmax(12rem,1fr)_11rem_11rem_auto_auto] xl:items-end">
+                <label class="text-xs font-semibold text-slate-600">Search categories
+                    <input type="search" name="q" value="{{ $filters['q'] ?? '' }}" maxlength="120" class="mt-1.5 block w-full rounded-lg border border-line px-3 py-2.5 text-sm font-normal text-slate-800" placeholder="Name, code, description, or unit">
+                </label>
+                <label class="text-xs font-semibold text-slate-600">Category status
+                    <select name="status" class="mt-1.5 block w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm font-normal text-slate-800"><option value="">All statuses</option><option value="active" @selected(($filters['status'] ?? '') === 'active')>Active</option><option value="inactive" @selected(($filters['status'] ?? '') === 'inactive')>Inactive</option></select>
+                </label>
+                <label class="text-xs font-semibold text-slate-600">Public visibility
+                    <select name="visibility" class="mt-1.5 block w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm font-normal text-slate-800"><option value="">All visibility</option><option value="public" @selected(($filters['visibility'] ?? '') === 'public')>Public</option><option value="hidden" @selected(($filters['visibility'] ?? '') === 'hidden')>Hidden</option></select>
+                </label>
+                <button class="rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-forest-800">Search categories</button>
+                <a href="{{ route('admin.service-categories.index') }}" class="rounded-lg border border-line bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-600 hover:bg-sand-50">Clear</a>
+            </form>
             @forelse ($categories as $category)
                 <form method="POST" action="{{ route('admin.service-categories.update', $category) }}" class="rounded-2xl border border-line bg-white p-5 shadow-sm">
                     @csrf
@@ -115,10 +128,13 @@
                 </form>
             @empty
                 <div class="rounded-2xl border border-dashed border-line bg-white p-8 text-center">
-                    <h2 class="text-base font-semibold text-slate-800">No categories configured</h2>
-                    <p class="mt-2 text-sm leading-6 text-slate-600">Add service categories here, or run the initial database seeder to install the standard civic service catalog.</p>
+                    <h2 class="text-base font-semibold text-slate-800">{{ filled($filters['q'] ?? null) || filled($filters['status'] ?? null) || filled($filters['visibility'] ?? null) ? 'No categories match these filters' : 'No categories configured' }}</h2>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">{{ filled($filters['q'] ?? null) || filled($filters['status'] ?? null) || filled($filters['visibility'] ?? null) ? 'Try another search term, status, or visibility.' : 'Add service categories here, or run the initial database seeder to install the standard civic service catalog.' }}</p>
                 </div>
             @endforelse
+            @if ($categories->hasPages())
+                <div>{{ $categories->links() }}</div>
+            @endif
         </section>
     </div>
 @endsection

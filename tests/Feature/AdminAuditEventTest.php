@@ -29,7 +29,11 @@ class AdminAuditEventTest extends TestCase
         ]);
 
         $this->actingAs($administrator)
-            ->get(route('admin.audit-events.index', ['event_key' => 'sla.escalated', 'actor_id' => $administrator->id]))
+            ->get(route('admin.audit-events.index', [
+                'q' => 'ReportSlaInstance',
+                'event_key' => 'sla.escalated',
+                'actor_id' => $administrator->id,
+            ]))
             ->assertOk()
             ->assertSee('report_sla.escalated')
             ->assertSee('resolution')

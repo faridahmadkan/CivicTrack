@@ -42,4 +42,25 @@ class CitizenDashboardTest extends TestCase
             ->get(route('citizen.home'))
             ->assertForbidden();
     }
+
+    public function test_citizen_report_search_is_limited_to_the_signed_in_reporter(): void
+    {
+        $this->seed();
+        $citizen = User::factory()->create();
+        $citizen->assignRole(RoleName::Citizen->value);
+        $citizen->markEmailAsVerified();
+        $ownReport = CivicReport::factory()->create([
+            'user_id' => $citizen->id,
+            'title' => 'Broken water pump near market',
+        ]);
+        $otherReport = CivicReport::factory()->create([
+            'title' => 'Broken water pump in another district',
+        ]);
+
+        $this->actingAs($citizen)
+            ->get(route('citizen.reports.index', ['q' => 'water pump', 'status' => 'submitted']))
+            ->assertOk()
+            ->assertSee($ownReport->public_reference)
+            ->assertDontSee($otherReport->public_reference);
+    }
 }

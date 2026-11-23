@@ -18,16 +18,20 @@
         <article class="rounded-xl border border-line bg-white p-4"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Active field work</p><p class="mt-2 text-2xl font-semibold text-forest-950">{{ number_format($activeWorkCount) }}</p></article>
         <article class="rounded-xl border border-red-100 bg-white p-4"><p class="text-xs font-semibold uppercase tracking-wide text-red-700">Reports with overdue targets</p><p class="mt-2 text-2xl font-semibold text-red-900">{{ number_format($overdueCount) }}</p></article>
     </section>
-    <form method="GET" action="{{ route('staff.reports.index') }}" class="mt-6 flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-white p-4">
+    <form method="GET" action="{{ route('staff.reports.index') }}" class="mt-6 grid gap-3 rounded-2xl border border-line bg-white p-4 sm:grid-cols-[minmax(14rem,1fr)_14rem_auto_auto] sm:items-end">
+        <label class="text-xs font-semibold text-slate-600">Search reports
+            <input type="search" name="q" value="{{ $filters['q'] ?? '' }}" maxlength="120" class="mt-1.5 block w-full rounded-lg border border-line px-3 py-2.5 text-sm font-normal text-slate-800" placeholder="Title, reference, or category">
+        </label>
         <label class="text-xs font-semibold text-slate-600">Status
-            <select name="status" class="mt-1.5 block rounded-lg border border-line bg-white px-3 py-2 text-sm font-normal text-slate-800">
+            <select name="status" class="mt-1.5 block w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm font-normal text-slate-800">
                 <option value="">Needs triage</option>
                 @foreach (App\Enums\CivicReportStatus::cases() as $status)
-                    <option value="{{ $status->value }}" @selected(request('status') === $status->value)>{{ $status->label() }}</option>
+                    <option value="{{ $status->value }}" @selected(($filters['status'] ?? '') === $status->value)>{{ $status->label() }}</option>
                 @endforeach
             </select>
         </label>
-        <button class="rounded-lg border border-line bg-white px-4 py-2 text-sm font-semibold text-forest-900 hover:bg-forest-50">Filter queue</button>
+        <button class="rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-forest-800">Search queue</button>
+        <a href="{{ route('staff.reports.index') }}" class="rounded-lg border border-line bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-600 hover:bg-sand-50">Clear</a>
     </form>
     <section class="mt-5 overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
         @forelse ($reports as $report)

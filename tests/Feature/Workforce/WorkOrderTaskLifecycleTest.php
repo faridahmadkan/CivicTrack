@@ -116,6 +116,12 @@ class WorkOrderTaskLifecycleTest extends TestCase
             ->assertSee('Add or replace a worker');
 
         $this->actingAs($worker)
+            ->get(route('worker.tasks.index', ['q' => $firstTask->task_number, 'status' => TaskAssignmentStatus::Assigned->value]))
+            ->assertOk()
+            ->assertSee($firstTask->task_number)
+            ->assertSee('Search assigned tasks');
+
+        $this->actingAs($worker)
             ->post(route('worker.tasks.accept', $firstTask))
             ->assertSessionHasNoErrors();
         $this->post(route('worker.tasks.start', $firstTask))->assertSessionHasNoErrors();

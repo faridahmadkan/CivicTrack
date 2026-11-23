@@ -9,20 +9,46 @@ use App\Models\ReportSlaPolicy;
 use App\Models\ServiceCategory;
 use App\Services\AuditWriter;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class ReportSlaPolicyController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'status' => ['nullable', Rule::in(['active', 'inactive'])],
+        ]);
+        $query = ReportSlaPolicy::query()
+            ->with(['category', 'organizationUnit', 'creator'])
+            ->withCount('instances')
+            ->when(filled($filters['q'] ?? null), static function (Builder $policies) use ($filters): void {
+                $search = '%'.trim($filters['q']).'%';
+                $policies->where(static function (Builder $matches) use ($search): void {
+                    $matches->where('name', 'like', $search)
+                        ->orWhere('priority', 'like', $search)
+                        ->orWhereHas('category', static fn (Builder $category) => $category->where('name', 'like', $search))
+                        ->orWhereHas('organizationUnit', static fn (Builder $unit) => $unit->where('name', 'like', $search));
+                });
+            });
+
+        if (($filters['status'] ?? null) === 'active') {
+            $query->where('is_active', true);
+        } elseif (($filters['status'] ?? null) === 'inactive') {
+            $query->where('is_active', false);
+        }
+
         return view('admin.sla-policies.index', [
-            'policies' => ReportSlaPolicy::query()
-                ->with(['category', 'organizationUnit', 'creator'])
-                ->withCount('instances')
+            'policies' => $query
                 ->orderByDesc('is_active')
                 ->orderBy('name')
-                ->get(),
+                ->paginate(15)
+                ->withQueryString(),
+            'filters' => $filters,
             'categories' => ServiceCategory::query()->orderBy('name')->get(),
             'organizationUnits' => OrganizationUnit::query()->orderBy('name')->get(),
         ]);

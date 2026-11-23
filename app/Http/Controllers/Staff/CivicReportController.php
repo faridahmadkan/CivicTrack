@@ -20,12 +20,17 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CivicReportController extends Controller
 {
     public function index(Request $request): View
     {
         $this->authorize('viewAny', CivicReport::class);
+        $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'status' => ['nullable', Rule::enum(CivicReportStatus::class)],
+        ]);
         $scopeQuery = CivicReport::query();
 
         if (! $request->user()->can('reports.manage.all')) {
@@ -44,9 +49,8 @@ class CivicReportController extends Controller
             ->orderByRaw("CASE priority WHEN 'urgent' THEN 1 WHEN 'high' THEN 2 WHEN 'normal' THEN 3 ELSE 4 END")
             ->orderBy('submitted_at');
 
-        if ($request->filled('status')) {
-            abort_unless(CivicReportStatus::tryFrom((string) $request->query('status')) !== null, 404);
-            $query->where('status', $request->query('status'));
+        if (filled($filters['status'] ?? null)) {
+            $query->where('status', $filters['status']);
         } else {
             $query->whereIn('status', [
                 CivicReportStatus::Submitted->value,
@@ -55,8 +59,18 @@ class CivicReportController extends Controller
             ]);
         }
 
+        if (filled($filters['q'] ?? null)) {
+            $search = '%'.trim($filters['q']).'%';
+            $query->where(static function (Builder $reports) use ($search): void {
+                $reports->where('title', 'like', $search)
+                    ->orWhere('public_reference', 'like', $search)
+                    ->orWhereHas('category', static fn (Builder $categories) => $categories->where('name', 'like', $search));
+            });
+        }
+
         return view('staff.reports.index', [
             'reports' => $query->paginate(20)->withQueryString(),
+            'filters' => $filters,
             'isAdministrator' => $request->user()->can('platform.access'),
             'triageCount' => (clone $scopeQuery)->whereIn('status', [
                 CivicReportStatus::Submitted->value,

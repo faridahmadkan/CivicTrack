@@ -144,6 +144,36 @@ class CivicReportTriageTest extends TestCase
         $this->assertNull($location->fresh()->public_longitude);
     }
 
+    public function test_staff_report_search_keeps_department_scoping(): void
+    {
+        $this->seed();
+        $unit = OrganizationUnit::factory()->create();
+        $otherUnit = OrganizationUnit::factory()->create();
+        $staff = User::factory()->create();
+        $staff->assignRole(RoleName::Staff->value);
+        $staff->markEmailAsVerified();
+        UnitMembership::factory()->create([
+            'user_id' => $staff->id,
+            'organization_unit_id' => $unit->id,
+            'membership_type' => RoleName::Staff->value,
+            'status' => WorkforceMembershipStatus::Active->value,
+        ]);
+        $visibleReport = CivicReport::factory()->create([
+            'routed_unit_id' => $unit->id,
+            'title' => 'Damaged streetlight at central park',
+        ]);
+        $hiddenReport = CivicReport::factory()->create([
+            'routed_unit_id' => $otherUnit->id,
+            'title' => 'Damaged streetlight near central park',
+        ]);
+
+        $this->actingAs($staff)
+            ->get(route('staff.reports.index', ['q' => 'central park', 'status' => 'submitted']))
+            ->assertOk()
+            ->assertSee($visibleReport->public_reference)
+            ->assertDontSee($hiddenReport->public_reference);
+    }
+
     public function test_report_without_coordinates_cannot_be_published_on_the_public_map(): void
     {
         $this->seed();

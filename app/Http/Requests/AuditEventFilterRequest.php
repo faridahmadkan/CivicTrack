@@ -24,6 +24,7 @@ class AuditEventFilterRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'q' => ['nullable', 'string', 'max:120'],
             'event_key' => ['nullable', 'string', 'max:120'],
             'actor_id' => ['nullable', 'integer', 'exists:users,id'],
             'from' => ['nullable', 'date_format:Y-m-d'],

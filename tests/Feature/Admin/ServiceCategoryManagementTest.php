@@ -40,6 +40,14 @@ class ServiceCategoryManagementTest extends TestCase
             'event_key' => 'service_category.created',
             'subject_id' => $category->id,
         ]);
+        $this->actingAs($administrator)
+            ->get(route('admin.service-categories.index', [
+                'q' => 'Drainage',
+                'status' => 'active',
+                'visibility' => 'public',
+            ]))
+            ->assertOk()
+            ->assertSee('Drainage services');
     }
 
     public function test_non_administrator_cannot_change_the_service_catalog(): void

@@ -11,7 +11,7 @@
             <h1 class="mt-2 text-3xl font-semibold tracking-tight text-forest-950">Service level policies</h1>
             <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Set first-response and resolution targets for reports. The most specific active policy applies when a report is submitted; each report keeps a snapshot of that policy and its deadlines.</p>
         </div>
-        <span class="rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">{{ $policies->count() }} policies</span>
+        <span class="rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">{{ $policies->total() }} policies</span>
     </div>
 
     <section class="mt-7 rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="new-policy-heading">
@@ -74,6 +74,16 @@
     </section>
 
     <section class="mt-8 space-y-4" aria-label="Existing service level policies">
+        <form method="GET" action="{{ route('admin.sla-policies.index') }}" class="grid gap-3 rounded-2xl border border-line bg-white p-4 sm:grid-cols-[minmax(14rem,1fr)_14rem_auto_auto] sm:items-end">
+            <label class="text-xs font-semibold text-slate-600">Search SLA policies
+                <input type="search" name="q" value="{{ $filters['q'] ?? '' }}" maxlength="120" class="mt-1.5 block w-full rounded-lg border border-line px-3 py-2.5 text-sm font-normal text-slate-800" placeholder="Policy, category, unit, or priority">
+            </label>
+            <label class="text-xs font-semibold text-slate-600">Policy status
+                <select name="status" class="mt-1.5 block w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm font-normal text-slate-800"><option value="">All statuses</option><option value="active" @selected(($filters['status'] ?? '') === 'active')>Active</option><option value="inactive" @selected(($filters['status'] ?? '') === 'inactive')>Inactive</option></select>
+            </label>
+            <button class="rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-forest-800">Search policies</button>
+            <a href="{{ route('admin.sla-policies.index') }}" class="rounded-lg border border-line bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-600 hover:bg-sand-50">Clear</a>
+        </form>
         @forelse ($policies as $policy)
             <form method="POST" action="{{ route('admin.sla-policies.update', $policy) }}" class="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6">
                 @csrf
@@ -142,9 +152,12 @@
             </form>
         @empty
             <div class="rounded-2xl border border-dashed border-line bg-white p-8 text-center">
-                <h2 class="text-base font-semibold text-slate-800">No service targets configured</h2>
-                <p class="mt-2 text-sm leading-6 text-slate-600">Reports will not receive SLA deadlines until an administrator creates an active matching policy.</p>
+                <h2 class="text-base font-semibold text-slate-800">{{ filled($filters['q'] ?? null) || filled($filters['status'] ?? null) ? 'No policies match these filters' : 'No service targets configured' }}</h2>
+                <p class="mt-2 text-sm leading-6 text-slate-600">{{ filled($filters['q'] ?? null) || filled($filters['status'] ?? null) ? 'Try another search term or status.' : 'Reports will not receive SLA deadlines until an administrator creates an active matching policy.' }}</p>
             </div>
         @endforelse
+        @if ($policies->hasPages())
+            <div>{{ $policies->links() }}</div>
+        @endif
     </section>
 @endsection

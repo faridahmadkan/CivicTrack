@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Citizen;
 
+use App\Enums\CivicReportStatus;
 use App\Enums\ReportAttachmentVisibility;
 use App\Enums\ReportCommentVisibility;
 use App\Http\Controllers\Controller;
@@ -11,19 +12,42 @@ use App\Models\CivicReport;
 use App\Models\ServiceCategory;
 use App\Services\CivicReportService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CivicReportController extends Controller
 {
     public function index(Request $request): View
     {
+        $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'status' => ['nullable', Rule::enum(CivicReportStatus::class)],
+        ]);
+        $query = CivicReport::query()
+            ->where('user_id', $request->user()->id)
+            ->with(['category', 'slaInstance']);
+
+        if (filled($filters['q'] ?? null)) {
+            $search = '%'.trim($filters['q']).'%';
+            $query->where(static function (Builder $reports) use ($search): void {
+                $reports->where('title', 'like', $search)
+                    ->orWhere('public_reference', 'like', $search)
+                    ->orWhereHas('category', static fn (Builder $categories) => $categories->where('name', 'like', $search));
+            });
+        }
+
+        if (filled($filters['status'] ?? null)) {
+            $query->where('status', $filters['status']);
+        }
+
         return view('citizen.reports.index', [
-            'reports' => CivicReport::query()
-                ->where('user_id', $request->user()->id)
-                ->with(['category', 'slaInstance'])
+            'reports' => $query
                 ->orderByDesc('submitted_at')
-                ->paginate(10),
+                ->paginate(10)
+                ->withQueryString(),
+            'filters' => $filters,
         ]);
     }
 

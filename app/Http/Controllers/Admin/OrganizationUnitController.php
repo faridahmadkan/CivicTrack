@@ -8,20 +8,47 @@ use App\Http\Requests\ManageOrganizationUnitRequest;
 use App\Models\OrganizationUnit;
 use App\Services\OrganizationUnitService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class OrganizationUnitController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
         $this->authorize('viewAny', OrganizationUnit::class);
+        $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'type' => ['nullable', Rule::enum(OrganizationUnitType::class)],
+            'status' => ['nullable', Rule::in(['active', 'inactive'])],
+        ]);
+        $query = OrganizationUnit::query()
+            ->with('parent')
+            ->when(filled($filters['q'] ?? null), static function (Builder $units) use ($filters): void {
+                $search = '%'.trim($filters['q']).'%';
+                $units->where(static function (Builder $matches) use ($search): void {
+                    $matches->where('name', 'like', $search)
+                        ->orWhere('code', 'like', $search)
+                        ->orWhere('description', 'like', $search)
+                        ->orWhereHas('parent', static fn (Builder $parent) => $parent->where('name', 'like', $search));
+                });
+            })
+            ->when(filled($filters['type'] ?? null), static fn (Builder $units) => $units->where('unit_type', $filters['type']));
+
+        if (($filters['status'] ?? null) === 'active') {
+            $query->where('is_active', true);
+        } elseif (($filters['status'] ?? null) === 'inactive') {
+            $query->where('is_active', false);
+        }
 
         return view('admin.organization-units.index', [
-            'organizationUnits' => OrganizationUnit::query()
-                ->with('parent')
+            'organizationUnits' => $query
                 ->orderBy('unit_type')
                 ->orderBy('name')
-                ->get(),
+                ->paginate(15)
+                ->withQueryString(),
+            'filters' => $filters,
             'activeParents' => OrganizationUnit::query()->where('is_active', true)->orderBy('name')->get(),
             'unitTypes' => OrganizationUnitType::cases(),
         ]);

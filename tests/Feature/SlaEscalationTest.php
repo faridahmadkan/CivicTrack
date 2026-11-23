@@ -53,6 +53,10 @@ class SlaEscalationTest extends TestCase
             'event_key' => 'report_sla.policy_created',
             'subject_id' => $policy->id,
         ]);
+        $this->actingAs($administrator)
+            ->get(route('admin.sla-policies.index', ['q' => 'Roads response', 'status' => 'active']))
+            ->assertOk()
+            ->assertSee('Roads response policy');
 
         $this->actingAs($administrator)
             ->put(route('admin.sla-policies.update', $policy), [

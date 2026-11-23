@@ -64,7 +64,20 @@
         </section>
 
         <section>
-            <div class="mb-3 flex items-center justify-between gap-4"><h2 class="text-base font-semibold text-slate-900">Accounts</h2><span class="text-xs text-slate-500">{{ $accounts->total() }} total</span></div>
+            <div class="mb-3 flex items-center justify-between gap-4"><h2 class="text-base font-semibold text-slate-900">Accounts</h2><span class="text-xs text-slate-500">{{ number_format($accounts->total()) }} matching</span></div>
+            <form method="GET" action="{{ route('admin.accounts.index') }}" class="mb-4 grid gap-3 rounded-2xl border border-line bg-white p-4 sm:grid-cols-[minmax(12rem,1fr)_10rem_10rem_auto_auto] sm:items-end">
+                <label class="text-xs font-semibold text-slate-600">Search accounts
+                    <input type="search" name="q" value="{{ $filters['q'] ?? '' }}" maxlength="120" class="mt-1.5 block w-full rounded-lg border border-line px-3 py-2.5 text-sm font-normal text-slate-800" placeholder="Name or email">
+                </label>
+                <label class="text-xs font-semibold text-slate-600">Role
+                    <select name="role" class="mt-1.5 block w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm font-normal text-slate-800"><option value="">All roles</option>@foreach (App\Enums\RoleName::cases() as $role)<option value="{{ $role->value }}" @selected(($filters['role'] ?? '') === $role->value)>{{ $role->label() }}</option>@endforeach</select>
+                </label>
+                <label class="text-xs font-semibold text-slate-600">Account status
+                    <select name="status" class="mt-1.5 block w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm font-normal text-slate-800"><option value="">All statuses</option>@foreach (App\Enums\AccountStatus::cases() as $status)<option value="{{ $status->value }}" @selected(($filters['status'] ?? '') === $status->value)>{{ str($status->value)->headline() }}</option>@endforeach</select>
+                </label>
+                <button class="rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-forest-800">Search</button>
+                <a href="{{ route('admin.accounts.index') }}" class="rounded-lg border border-line bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-600 hover:bg-sand-50">Clear</a>
+            </form>
             <div class="overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
                 @forelse ($accounts as $account)
                     <article class="border-b border-line p-4 last:border-b-0 sm:p-5">

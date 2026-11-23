@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Workforce;
 
 use App\Enums\RoleName;
+use App\Enums\WorkforceApplicationStatus;
 use App\Enums\WorkforceApplicationType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProvideWorkforceInformationRequest;
@@ -13,22 +14,50 @@ use App\Models\WorkforceApplication;
 use App\Services\RegistrationControlService;
 use App\Services\WorkforceApplicationService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Throwable;
 
 class WorkforceApplicationController extends Controller
 {
     public function index(Request $request, RegistrationControlService $registrationControls): View
     {
+        $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'type' => ['nullable', Rule::enum(WorkforceApplicationType::class)],
+            'status' => ['nullable', Rule::enum(WorkforceApplicationStatus::class)],
+        ]);
+        $query = WorkforceApplication::query()
+            ->whereBelongsTo($request->user())
+            ->with('requestedUnit');
+
+        if (filled($filters['q'] ?? null)) {
+            $search = '%'.trim($filters['q']).'%';
+            $query->where(static function (Builder $applications) use ($search): void {
+                $applications->where('application_number', 'like', $search)
+                    ->orWhere('position_title', 'like', $search)
+                    ->orWhereHas('requestedUnit', static fn (Builder $units) => $units->where('name', 'like', $search));
+            });
+        }
+
+        if (filled($filters['type'] ?? null)) {
+            $query->where('application_type', $filters['type']);
+        }
+
+        if (filled($filters['status'] ?? null)) {
+            $query->where('status', $filters['status']);
+        }
+
         return view('workforce.applications.index', [
-            'applications' => WorkforceApplication::query()
-                ->whereBelongsTo($request->user())
-                ->with('requestedUnit')
+            'applications' => $query
                 ->orderByDesc('submitted_at')
                 ->orderByDesc('id')
-                ->get(),
+                ->paginate(10)
+                ->withQueryString(),
+            'filters' => $filters,
             'canApply' => $request->user()->hasRole(RoleName::Citizen->value)
                 && ! $request->user()->hasAnyRole([RoleName::Staff->value, RoleName::Worker->value]),
             'staffApplicationsOpen' => $registrationControls->isOpen(RoleName::Staff),

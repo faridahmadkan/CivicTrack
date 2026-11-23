@@ -24,7 +24,7 @@ class NotificationCenterTest extends TestCase
         $notification = $citizen->notifications()->firstOrFail();
 
         $this->actingAs($citizen)
-            ->get(route('account.notifications.index'))
+            ->get(route('account.notifications.index', ['q' => $report->public_reference, 'status' => 'unread']))
             ->assertOk()
             ->assertSee('Notifications')
             ->assertSee($report->public_reference)

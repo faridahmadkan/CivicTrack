@@ -14,7 +14,10 @@
         <span class="rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">{{ number_format($events->total()) }} matching events</span>
     </div>
 
-    <form method="GET" action="{{ route('admin.audit-events.index') }}" class="mt-6 grid gap-3 rounded-2xl border border-line bg-white p-4 sm:grid-cols-2 xl:grid-cols-4">
+    <form method="GET" action="{{ route('admin.audit-events.index') }}" class="mt-6 grid gap-3 rounded-2xl border border-line bg-white p-4 sm:grid-cols-2 xl:grid-cols-5">
+        <label class="text-xs font-semibold text-slate-600">Search audit events
+            <input type="search" name="q" value="{{ $filters['q'] ?? '' }}" maxlength="120" class="mt-1.5 block w-full rounded-lg border border-line px-3 py-2.5 text-sm font-normal text-slate-800" placeholder="Event, actor, subject, or details">
+        </label>
         <label class="text-xs font-semibold text-slate-600">Event
             <input name="event_key" value="{{ $filters['event_key'] ?? '' }}" maxlength="120" class="mt-1.5 block w-full rounded-lg border border-line px-3 py-2.5 text-sm font-normal text-slate-800" placeholder="report_sla.escalated">
         </label>
@@ -33,7 +36,7 @@
             <input type="date" name="to" value="{{ $filters['to'] ?? '' }}" class="mt-1.5 block w-full rounded-lg border border-line px-3 py-2.5 text-sm font-normal text-slate-800">
         </label>
         <div class="flex items-center gap-2 xl:col-span-4">
-            <button class="rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-forest-800">Apply filters</button>
+            <button class="rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-forest-800">Search and filter</button>
             <a href="{{ route('admin.audit-events.index') }}" class="rounded-lg border border-line bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-sand-50">Clear</a>
         </div>
     </form>

@@ -9,14 +9,26 @@ use App\Http\Requests\WorkerTaskUpdateRequest;
 use App\Models\WorkTask;
 use App\Services\TaskAssignmentService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class TaskController extends Controller
 {
     public function home(Request $request): View
     {
-        $activeAssignments = $request->user()->taskAssignments()
+        $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'status' => ['nullable', Rule::in([
+                TaskAssignmentStatus::Assigned->value,
+                TaskAssignmentStatus::Accepted->value,
+                TaskAssignmentStatus::InProgress->value,
+                TaskAssignmentStatus::Submitted->value,
+                TaskAssignmentStatus::NeedsRework->value,
+            ])],
+        ]);
+        $baseQuery = $request->user()->taskAssignments()
             ->whereNull('ended_at')
             ->whereIn('status', [
                 TaskAssignmentStatus::Assigned->value,
@@ -24,12 +36,40 @@ class TaskController extends Controller
                 TaskAssignmentStatus::InProgress->value,
                 TaskAssignmentStatus::Submitted->value,
                 TaskAssignmentStatus::NeedsRework->value,
-            ])
+            ]);
+        $assignmentCounts = (clone $baseQuery)
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+        $assignmentsQuery = (clone $baseQuery)
             ->with('task.workOrder.report')
-            ->orderByDesc('assigned_at')
-            ->get();
+            ->orderByDesc('assigned_at');
 
-        return view('worker.home', ['assignments' => $activeAssignments]);
+        if (filled($filters['q'] ?? null)) {
+            $search = '%'.trim($filters['q']).'%';
+            $assignmentsQuery->whereHas('task', static function (Builder $tasks) use ($search): void {
+                $tasks->where('title', 'like', $search)
+                    ->orWhere('task_number', 'like', $search)
+                    ->orWhereHas('workOrder', static function (Builder $workOrders) use ($search): void {
+                        $workOrders->where('reference', 'like', $search)
+                            ->orWhereHas('report', static function (Builder $reports) use ($search): void {
+                                $reports->where('public_reference', 'like', $search)
+                                    ->orWhere('title', 'like', $search)
+                                    ->orWhereHas('category', static fn (Builder $categories) => $categories->where('name', 'like', $search));
+                            });
+                    });
+            });
+        }
+
+        if (filled($filters['status'] ?? null)) {
+            $assignmentsQuery->where('status', $filters['status']);
+        }
+
+        return view('worker.home', [
+            'assignments' => $assignmentsQuery->paginate(15)->withQueryString(),
+            'assignmentCounts' => $assignmentCounts,
+            'filters' => $filters,
+        ]);
     }
 
     public function index(Request $request): View
