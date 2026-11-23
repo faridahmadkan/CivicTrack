@@ -26,10 +26,36 @@
                 <h2 id="report-location-heading" class="text-sm font-semibold text-slate-900">Pin the location</h2>
                 <p class="mt-1 max-w-xl text-xs leading-5 text-slate-600">Click the map or use your device location. The precise pin is only available to authorized service staff.</p>
             </div>
-            <button type="button" id="report-map-locate" class="rounded-lg border border-line bg-white px-3 py-2 text-xs font-semibold text-forest-900 transition hover:bg-forest-50">Use my location</button>
+            <div class="flex flex-wrap items-center gap-3">
+                <button type="button" id="report-map-locate" class="rounded-lg border border-line bg-white px-3 py-2 text-xs font-semibold text-forest-900 transition hover:bg-forest-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">Use my location</button>
+                <span class="text-xs text-slate-600" data-location-status role="status" aria-live="polite"></span>
+            </div>
+        </div>
+        <div class="mt-4" data-map-search data-search-url="{{ route('public.places.search') }}" data-search-configured="{{ config('civictrack.map.place_search.enabled') && config('civictrack.map.place_search.configured') ? 'true' : 'false' }}" data-report-location-search>
+            <div class="flex flex-col gap-2 sm:flex-row" role="search" data-search-controls>
+                <label for="report-place-search" class="sr-only">Search for a place</label>
+                <input id="report-place-search" data-place-query type="search" minlength="2" maxlength="120" autocomplete="off" class="min-w-0 flex-1 rounded-lg border border-line bg-white px-3 py-2.5 text-sm focus:border-forest-700 focus:outline-none focus:ring-4 focus:ring-forest-100" placeholder="Search a street, landmark, or place name">
+                <button type="button" data-search-submit class="rounded-lg border border-line bg-white px-4 py-2.5 text-sm font-semibold text-forest-900 transition hover:bg-forest-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">Search place</button>
+            </div>
+            <p class="mt-1.5 text-xs leading-5 text-slate-500">Search terms are sent to {{ config('civictrack.map.place_search.name') }}. Your report pin coordinates are not sent. Confirm a result before it changes the report location.</p>
+            <p class="text-xs text-slate-500">Provider attribution: {!! config('civictrack.map.place_search.attribution') !!}</p>
+            <p class="mt-2 text-sm text-slate-700" data-search-status role="status" aria-live="polite"></p>
+            <ul class="mt-2 hidden space-y-2" data-search-results aria-label="Place search results"></ul>
+            <div class="mt-3 hidden rounded-lg border border-forest-200 bg-white p-3" data-search-confirmation>
+                <p class="text-sm font-semibold text-slate-800" data-search-selection></p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    <button type="button" data-confirm-search class="rounded-lg bg-forest-900 px-3 py-2 text-xs font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">Use this location</button>
+                    <button type="button" data-cancel-search class="rounded-lg border border-line px-3 py-2 text-xs font-semibold text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">Cancel</button>
+                </div>
+            </div>
+        </div>
+        <div class="mt-4 flex flex-wrap items-center gap-2" data-map-layer-controls role="group" aria-label="Map imagery">
+            <button type="button" data-map-layer="street" aria-pressed="true" class="rounded-lg border border-forest-800 bg-forest-900 px-3 py-2 text-xs font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">Street map</button>
+            <button type="button" data-map-layer="satellite" aria-pressed="false" @disabled(blank(config('civictrack.map.satellite_tile_url'))) class="rounded-lg border border-line bg-white px-3 py-2 text-xs font-semibold text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700 disabled:cursor-not-allowed disabled:opacity-50">Satellite</button>
+            <span class="text-xs text-slate-600" data-map-tile-status role="status" aria-live="polite">{{ blank(config('civictrack.map.satellite_tile_url')) ? 'Satellite imagery is not configured. Street map is active.' : 'Street map is active.' }}</span>
         </div>
         <div class="mt-4 overflow-hidden rounded-xl border border-line bg-white">
-            <div id="report-location-map" class="report-map" data-report-map data-map-center='@json($mapCenter)' data-map-zoom="2" data-tile-url="{{ config('civictrack.map.tile_url') }}" data-attribution="{{ config('civictrack.map.attribution') }}" data-latitude-input="report-latitude" data-longitude-input="report-longitude" data-location-output="selected-location" data-locate-button="report-map-locate" role="application" aria-label="Interactive map. Click to select a report location."></div>
+            <div id="report-location-map" class="report-map" data-report-map data-map-center='@json($mapCenter)' data-map-zoom="2" data-street-tile-url="{{ config('civictrack.map.street_tile_url') }}" data-street-attribution="{{ config('civictrack.map.street_attribution') }}" data-satellite-tile-url="{{ config('civictrack.map.satellite_tile_url') }}" data-satellite-attribution="{{ config('civictrack.map.satellite_attribution') }}" data-latitude-input="report-latitude" data-longitude-input="report-longitude" data-location-output="selected-location" data-address-input="report-address" data-locate-button="report-map-locate" role="application" aria-label="Interactive map. Click to select a report location."></div>
         </div>
         <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
             <span>Selected coordinates</span>
@@ -40,7 +66,7 @@
         @error('latitude')<span class="mt-2 block text-xs font-medium text-coral-600">{{ $message }}</span>@enderror
         @error('longitude')<span class="mt-1 block text-xs font-medium text-coral-600">{{ $message }}</span>@enderror
         <label class="mt-4 block text-sm font-medium text-slate-700">Nearby address or landmark <span class="font-normal text-slate-500">(optional)</span>
-            <input name="address" value="{{ old('address') }}" maxlength="255" class="mt-1.5 w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm" placeholder="Street, intersection, or nearby landmark">
+            <input id="report-address" name="address" value="{{ old('address') }}" maxlength="255" class="mt-1.5 w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm" placeholder="Street, intersection, or nearby landmark">
         </label>
     </section>
 

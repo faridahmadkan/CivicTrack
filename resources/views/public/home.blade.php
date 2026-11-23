@@ -69,6 +69,25 @@
         </div>
     </section>
 
+    @if ($staffApplicationsOpen || $workerApplicationsOpen)
+        <section class="border-b border-line bg-sand-50">
+            <div class="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-8 sm:px-8 lg:flex-row lg:items-center lg:justify-between lg:px-10">
+                <div class="max-w-3xl">
+                    <h2 class="text-lg font-semibold text-forest-950">Join a civic service team</h2>
+                    <p class="mt-1 text-sm leading-6 text-slate-600">You need an active citizen account to apply. Sign in or create an account if citizen registration is open, then submit an application for administrator review. Applicants do not receive staff or worker access until an application is approved.</p>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    @if ($staffApplicationsOpen)
+                        <a href="{{ route('workforce.applications.create', 'staff') }}" class="rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-forest-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">Apply for staff roles</a>
+                    @endif
+                    @if ($workerApplicationsOpen)
+                        <a href="{{ route('workforce.applications.create', 'worker') }}" class="rounded-lg border border-forest-900/20 bg-white px-4 py-2.5 text-sm font-semibold text-forest-900 transition hover:bg-forest-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">Apply for field work</a>
+                    @endif
+                </div>
+            </div>
+        </section>
+    @endif
+
     <section class="border-b border-line bg-white">
         <div class="mx-auto grid max-w-7xl gap-8 px-5 py-8 sm:grid-cols-[1fr_auto] sm:items-center sm:px-8 lg:px-10">
             <div class="flex items-start gap-3">

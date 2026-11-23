@@ -125,6 +125,12 @@ class CivicReportTriageTest extends TestCase
         $report->forceFill(['is_public' => true])->save();
 
         $this->actingAs($staff)
+            ->get(route('staff.reports.show', $report))
+            ->assertOk()
+            ->assertSee(route('staff.reports.index'))
+            ->assertSee('aria-current="page"', false);
+
+        $this->actingAs($staff)
             ->put(route('staff.reports.triage', $report), [
                 'status' => CivicReportStatus::Acknowledged->value,
                 'priority' => CivicReportPriority::Normal->value,

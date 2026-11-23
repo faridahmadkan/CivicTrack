@@ -11,23 +11,25 @@ use App\Http\Controllers\Admin\ServiceCategoryController;
 use App\Http\Controllers\Admin\WorkforceApplicationController as AdminWorkforceApplicationController;
 use App\Http\Controllers\Citizen\CivicReportController as CitizenCivicReportController;
 use App\Http\Controllers\Citizen\DashboardController as CitizenDashboardController;
-use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\CommunityMapController;
+use App\Http\Controllers\Public\HomeController;
+use App\Http\Controllers\Public\PlaceSearchController;
 use App\Http\Controllers\Public\ReportFeedbackController;
 use App\Http\Controllers\Public\ReportSubmissionController;
 use App\Http\Controllers\Staff\CivicReportController as StaffCivicReportController;
-use App\Http\Controllers\Staff\TaskManagementController;
 use App\Http\Controllers\Staff\ReportReopenController;
+use App\Http\Controllers\Staff\TaskManagementController;
 use App\Http\Controllers\Staff\WorkerRatingController;
 use App\Http\Controllers\Staff\WorkOrderController;
-use App\Http\Controllers\Workforce\WorkforceApplicationController;
 use App\Http\Controllers\Worker\TaskController as WorkerTaskController;
+use App\Http\Controllers\Workforce\WorkforceApplicationController;
 use App\Models\WorkforceApplication;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('public.home');
 Route::view('/privacy', 'public.privacy')->name('privacy.notice');
 Route::get('/map', CommunityMapController::class)->name('public.map.index');
+Route::post('/places/search', PlaceSearchController::class)->middleware('throttle:10,1')->name('public.places.search');
 
 Route::get('/reports/create', [ReportSubmissionController::class, 'create'])->name('public.reports.create');
 Route::post('/reports', [ReportSubmissionController::class, 'store'])->middleware('throttle:6,1')->name('public.reports.store');
@@ -45,21 +47,21 @@ Route::post('/reports/{report}/reopen-requests', [ReportFeedbackController::clas
 Route::get('/reports/{report}/attachments/{attachment}', [ReportSubmissionController::class, 'downloadAttachment'])
     ->name('public.reports.track.attachments.download');
 
-Route::middleware(['auth', 'verified', 'account.active', 'can:reports.view.own'])
+Route::middleware(['auth', 'verified', 'account.active', 'cache.headers:no_store;private', 'can:reports.view.own'])
     ->get('/citizen', CitizenDashboardController::class)
     ->name('citizen.home');
 
-Route::middleware(['auth', 'verified', 'account.active'])
+Route::middleware(['auth', 'verified', 'account.active', 'cache.headers:no_store;private'])
     ->get('/home', AccountHomeController::class)
     ->name('home');
 
-Route::middleware(['auth', 'verified', 'account.active'])->prefix('account/notifications')->name('account.notifications.')->group(function (): void {
+Route::middleware(['auth', 'verified', 'account.active', 'cache.headers:no_store;private'])->prefix('account/notifications')->name('account.notifications.')->group(function (): void {
     Route::get('/', [NotificationCenterController::class, 'index'])->name('index');
     Route::patch('/{notification}/read', [NotificationCenterController::class, 'markRead'])->name('read');
     Route::post('/read-all', [NotificationCenterController::class, 'markAllRead'])->name('read-all');
 });
 
-Route::middleware(['auth', 'verified', 'account.active'])->prefix('workforce')->name('workforce.')->group(function (): void {
+Route::middleware(['auth', 'verified', 'account.active', 'cache.headers:no_store;private'])->prefix('workforce')->name('workforce.')->group(function (): void {
     Route::get('/applications', [WorkforceApplicationController::class, 'index'])->name('applications.index');
     Route::get('/applications/{type}/create', [WorkforceApplicationController::class, 'create'])->name('applications.create');
     Route::post('/applications/{type}', [WorkforceApplicationController::class, 'store'])->name('applications.store');
@@ -71,7 +73,7 @@ Route::middleware(['auth', 'verified', 'account.active'])->prefix('workforce')->
         ->name('application-documents.download');
 });
 
-Route::middleware(['auth', 'verified', 'account.active', 'can:reports.create'])
+Route::middleware(['auth', 'verified', 'account.active', 'cache.headers:no_store;private', 'can:reports.create'])
     ->prefix('citizen/reports')
     ->name('citizen.reports.')
     ->group(function (): void {
@@ -84,7 +86,7 @@ Route::middleware(['auth', 'verified', 'account.active', 'can:reports.create'])
             ->name('attachments.download');
     });
 
-Route::middleware(['auth', 'verified', 'account.active'])
+Route::middleware(['auth', 'verified', 'account.active', 'cache.headers:no_store;private'])
     ->prefix('staff/reports')
     ->name('staff.reports.')
     ->group(function (): void {
@@ -97,7 +99,7 @@ Route::middleware(['auth', 'verified', 'account.active'])
         Route::post('/{report}/work-orders', [WorkOrderController::class, 'store'])->name('work-orders.store');
     });
 
-Route::middleware(['auth', 'verified', 'account.active'])
+Route::middleware(['auth', 'verified', 'account.active', 'cache.headers:no_store;private'])
     ->prefix('staff')
     ->name('staff.')
     ->group(function (): void {
@@ -113,7 +115,7 @@ Route::middleware(['auth', 'verified', 'account.active'])
             ->name('tasks.evidence.download');
     });
 
-Route::middleware(['auth', 'verified', 'account.active', 'can:assignments.view.own'])
+Route::middleware(['auth', 'verified', 'account.active', 'cache.headers:no_store;private', 'can:assignments.view.own'])
     ->prefix('worker')
     ->name('worker.')
     ->group(function (): void {
@@ -130,7 +132,7 @@ Route::middleware(['auth', 'verified', 'account.active', 'can:assignments.view.o
             ->name('tasks.evidence.download');
     });
 
-Route::middleware(['auth', 'verified', 'account.active', 'can:platform.access'])
+Route::middleware(['auth', 'verified', 'account.active', 'cache.headers:no_store;private', 'can:platform.access'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function (): void {

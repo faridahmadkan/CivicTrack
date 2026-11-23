@@ -26,6 +26,7 @@ class CitizenDashboardTest extends TestCase
             ->assertOk()
             ->assertSee('Reports submitted')
             ->assertSee('Recent reports')
+            ->assertSee('aria-current="page"', false)
             ->assertSee($ownReport->public_reference)
             ->assertDontSee(CivicReport::query()->whereNull('user_id')->firstOrFail()->public_reference);
     }

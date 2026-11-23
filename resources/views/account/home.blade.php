@@ -1,4 +1,4 @@
-@extends('layouts.auth')
+@extends(auth()->user()->hasRole('administrator') ? 'layouts.admin' : (auth()->user()->hasRole('staff') ? 'layouts.staff' : (auth()->user()->hasRole('worker') ? 'layouts.worker' : (auth()->user()->hasRole('citizen') ? 'layouts.citizen' : 'layouts.auth'))))
 
 @section('title', 'Your account')
 

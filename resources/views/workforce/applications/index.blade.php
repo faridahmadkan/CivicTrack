@@ -3,6 +3,7 @@
 @section('title', 'Workforce applications')
 
 @section('content')
+    <a href="{{ route('citizen.home') }}" class="mb-6 inline-flex rounded-lg text-sm font-semibold text-forest-800 hover:text-forest-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">← Citizen dashboard</a>
     <div class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div><p class="text-xs font-bold uppercase tracking-[0.18em] text-forest-700">Career with CivicTrack services</p><h1 class="mt-2 text-3xl font-semibold tracking-tight text-forest-950">Workforce applications</h1><p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Staff coordinators and field workers have separate approval processes and access. Applying does not provide operational permissions.</p></div>
         @if ($canApply)

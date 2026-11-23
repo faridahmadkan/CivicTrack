@@ -36,14 +36,8 @@
         </aside>
 
         <main class="flex min-h-screen flex-col px-5 py-6 sm:px-10 lg:px-14 xl:px-20">
-            <div class="flex items-center justify-between lg:justify-end">
-                <a href="{{ route('public.home') }}" class="inline-flex items-center gap-2 text-sm font-bold text-forest-900 lg:hidden">
-                    <span class="flex size-8 items-center justify-center rounded-lg bg-forest-900 text-white">
-                        <svg viewBox="0 0 24 24" class="size-5" fill="none" aria-hidden="true"><path d="M4 18.5h16M6.5 18.5v-8l5.5-5 5.5 5v8M9.5 18.5v-5h5v5m-11-6.5 8.5-5 8.5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </span>
-                    CivicTrack
-                </a>
-                <a href="{{ route('public.home') }}" class="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-sand-100 hover:text-forest-900 lg:inline-flex">← Back to CivicTrack</a>
+            <div class="flex items-center justify-between">
+                <a href="{{ route('public.home') }}" class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-forest-900 transition hover:bg-sand-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">← Back to CivicTrack</a>
             </div>
             <div class="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-12">
                 @yield('content')

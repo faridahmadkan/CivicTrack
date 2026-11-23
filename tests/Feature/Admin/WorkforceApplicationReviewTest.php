@@ -58,6 +58,12 @@ class WorkforceApplicationReviewTest extends TestCase
         ]);
         $this->assertSame(1, AuditEvent::query()->where('event_key', 'workforce_application.reviewed')->count());
         $this->assertSame(1, UnitMembership::query()->where('user_id', $applicant->id)->count());
+
+        $this->actingAs($administrator)
+            ->get(route('admin.workforce-applications.show', $application))
+            ->assertOk()
+            ->assertSee(route('admin.workforce-applications.index'))
+            ->assertSee('aria-current="page"', false);
     }
 
     public function test_admin_approval_creates_a_worker_role_without_staff_permissions(): void

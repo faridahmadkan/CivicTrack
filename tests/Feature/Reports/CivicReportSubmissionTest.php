@@ -24,7 +24,7 @@ class CivicReportSubmissionTest extends TestCase
         Storage::fake('local');
         $this->seed();
         $category = ServiceCategory::query()->where('code', 'ROAD')->firstOrFail();
-        $document = UploadedFile::fake()->image('crossing.jpg');
+        $document = UploadedFile::fake()->create('crossing.jpg', 100, 'image/jpeg');
 
         $response = $this->post(route('public.reports.store'), [
             'service_category_id' => $category->id,

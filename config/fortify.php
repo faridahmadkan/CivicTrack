@@ -101,7 +101,7 @@ return [
     |
     */
 
-    'middleware' => ['web'],
+    'middleware' => ['web', 'cache.headers:no_store;private'],
 
     /*
     |--------------------------------------------------------------------------

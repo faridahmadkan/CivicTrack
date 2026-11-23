@@ -5,20 +5,18 @@ namespace Tests\Feature\Workforce;
 use App\Enums\CivicReportStatus;
 use App\Enums\RoleName;
 use App\Enums\TaskAssignmentStatus;
-use App\Enums\WorkTaskStatus;
 use App\Enums\WorkforceApplicationType;
 use App\Enums\WorkforceMembershipStatus;
+use App\Enums\WorkTaskStatus;
 use App\Models\CivicReport;
 use App\Models\OrganizationUnit;
 use App\Models\TaskAssignment;
-use App\Models\TaskDependency;
 use App\Models\TaskEvidence;
-use App\Models\TaskVerification;
 use App\Models\UnitMembership;
 use App\Models\User;
+use App\Models\WorkerProfile;
 use App\Models\WorkOrder;
 use App\Models\WorkTask;
-use App\Models\WorkerProfile;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -91,10 +89,14 @@ class WorkOrderTaskLifecycleTest extends TestCase
             ->post(route('worker.tasks.accept', $firstTask))
             ->assertSessionHasNoErrors();
         $this->post(route('worker.tasks.start', $firstTask))->assertSessionHasNoErrors();
+        $this->get(route('worker.tasks.show', $firstTask))
+            ->assertOk()
+            ->assertSee(route('worker.tasks.index'))
+            ->assertSee('aria-current="page"', false);
         $this->post(route('worker.tasks.evidence.store', $firstTask), [
             'evidence_type' => 'before',
             'caption' => 'Site condition before repair.',
-            'evidence' => [UploadedFile::fake()->image('site-before.jpg')],
+            'evidence' => [UploadedFile::fake()->create('site-before.jpg', 100, 'image/jpeg')],
         ])->assertSessionHasNoErrors();
 
         Storage::disk('local')->assertExists(TaskEvidence::query()->firstOrFail()->storage_path);
@@ -122,7 +124,7 @@ class WorkOrderTaskLifecycleTest extends TestCase
         $this->post(route('worker.tasks.evidence.store', $secondTask), [
             'evidence_type' => 'after',
             'caption' => 'Replacement sign is installed.',
-            'evidence' => [UploadedFile::fake()->image('site-after.jpg')],
+            'evidence' => [UploadedFile::fake()->create('site-after.jpg', 100, 'image/jpeg')],
         ])->assertSessionHasNoErrors();
         $this->post(route('worker.tasks.submit', $secondTask))->assertSessionHasNoErrors();
 

@@ -29,7 +29,7 @@ class WorkforceApplicationSubmissionTest extends TestCase
         $organizationUnit = OrganizationUnit::factory()->create();
         $applicant = User::factory()->create();
         $applicant->assignRole(RoleName::Citizen->value);
-        $document = UploadedFile::fake()->image('service-reference.jpg');
+        $document = UploadedFile::fake()->create('service-reference.jpg', 100, 'image/jpeg');
 
         $response = $this->actingAs($applicant)->post(route('workforce.applications.store', 'staff'), [
             'position_title' => 'Community services coordinator',
@@ -68,6 +68,7 @@ class WorkforceApplicationSubmissionTest extends TestCase
             ->get(route('workforce.applications.show', $application))
             ->assertOk()
             ->assertSee($application->application_number)
+            ->assertSee('aria-current="page"', false)
             ->assertSee('service-reference.jpg');
     }
 

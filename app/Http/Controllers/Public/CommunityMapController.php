@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Public;
 
-use App\Http\Controllers\Controller;
 use App\Enums\CivicReportStatus;
+use App\Http\Controllers\Controller;
 use App\Http\Requests\PublicMapFilterRequest;
 use App\Models\CivicReport;
 use App\Models\ServiceCategory;
@@ -55,8 +55,10 @@ class CommunityMapController extends Controller
                 ->get(),
             'filters' => $filters,
             'mapCenter' => [config('civictrack.map.latitude'), config('civictrack.map.longitude')],
-            'tileUrl' => config('civictrack.map.tile_url'),
-            'mapAttribution' => config('civictrack.map.attribution'),
+            'streetTileUrl' => config('civictrack.map.street_tile_url'),
+            'streetAttribution' => config('civictrack.map.street_attribution'),
+            'satelliteTileUrl' => config('civictrack.map.satellite_tile_url'),
+            'satelliteAttribution' => config('civictrack.map.satellite_attribution'),
         ]);
     }
 }

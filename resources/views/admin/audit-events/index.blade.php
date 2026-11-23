@@ -4,6 +4,7 @@
 @section('eyebrow', 'Accountability and system history')
 
 @section('content')
+    <a href="{{ route('admin.home') }}" class="mb-6 inline-flex rounded-lg text-sm font-semibold text-forest-800 hover:text-forest-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">← Administration home</a>
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
             <p class="text-xs font-bold uppercase tracking-[0.18em] text-forest-700">Append-only records</p>

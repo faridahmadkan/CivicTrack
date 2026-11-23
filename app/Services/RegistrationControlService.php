@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\RoleName;
 use App\Models\RegistrationControl;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -26,8 +27,15 @@ class RegistrationControlService
             ->first();
 
         if (! $registrationControl?->isOpenAt()) {
+            $message = match ($context) {
+                RoleName::Citizen => 'Citizen registration is currently unavailable. Please check back later.',
+                RoleName::Staff => 'Staff applications are currently unavailable. Please check back later.',
+                RoleName::Worker => 'Field worker applications are currently unavailable. Please check back later.',
+                RoleName::Administrator => 'Administrator access cannot be publicly registered.',
+            };
+
             throw ValidationException::withMessages([
-                'registration' => 'Citizen registration is currently unavailable. Please check back later.',
+                'registration' => $message,
             ]);
         }
     }
@@ -35,8 +43,8 @@ class RegistrationControlService
     public function configure(
         RoleName $context,
         bool $enabled,
-        ?\Illuminate\Support\Carbon $opensAt,
-        ?\Illuminate\Support\Carbon $closesAt,
+        ?Carbon $opensAt,
+        ?Carbon $closesAt,
         User $actor,
         AuditWriter $auditWriter,
     ): RegistrationControl {

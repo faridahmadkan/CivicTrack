@@ -27,9 +27,9 @@
 
             <nav class="flex items-center gap-2 sm:gap-4" aria-label="Main navigation">
                 <a href="{{ route('public.home') }}#how-it-works" class="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-sand-100 hover:text-forest-900 sm:inline-flex">How it works</a>
-                <a href="{{ route('public.map.index') }}" class="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-sand-100 hover:text-forest-900 sm:inline-flex">Public map</a>
-                <a href="{{ route('privacy.notice') }}" class="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-sand-100 hover:text-forest-900 md:inline-flex">Privacy</a>
-                <a href="{{ route('login') }}" class="rounded-lg px-3 py-2 text-sm font-semibold text-forest-900 transition hover:bg-forest-50">Sign in</a>
+                <a href="{{ route('public.map.index') }}" @if (request()->routeIs('public.map.*')) aria-current="page" @endif class="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-sand-100 hover:text-forest-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700 sm:inline-flex">@if (request()->routeIs('public.map.*'))<span aria-hidden="true">✓ </span>@endif Public map</a>
+                <a href="{{ route('privacy.notice') }}" @if (request()->routeIs('privacy.*')) aria-current="page" @endif class="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-sand-100 hover:text-forest-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700 md:inline-flex">@if (request()->routeIs('privacy.*'))<span aria-hidden="true">✓ </span>@endif Privacy</a>
+                <a href="{{ route('login') }}" class="rounded-lg px-3 py-2 text-sm font-semibold text-forest-900 transition hover:bg-forest-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">Sign in</a>
                 @if ($citizenRegistrationOpen ?? false)
                     <a href="{{ route('register') }}" class="rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-forest-800">Create account</a>
                 @endif

@@ -4,6 +4,7 @@
 
 @section('content')
     <section class="mx-auto max-w-xl px-5 py-14 sm:px-8 sm:py-20">
+        <a href="{{ route('public.home') }}" class="mb-5 inline-flex rounded-lg text-sm font-semibold text-forest-800 hover:text-forest-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">← CivicTrack home</a>
         <div class="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8">
             <p class="text-xs font-bold uppercase tracking-[0.18em] text-forest-700">Private report access</p>
             <h1 class="mt-2 text-3xl font-semibold tracking-tight text-forest-950">Enter your access code.</h1>
