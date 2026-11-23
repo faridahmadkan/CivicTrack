@@ -151,10 +151,11 @@
                 </div>
             </form>
         @empty
-            <div class="rounded-2xl border border-dashed border-line bg-white p-8 text-center">
-                <h2 class="text-base font-semibold text-slate-800">{{ filled($filters['q'] ?? null) || filled($filters['status'] ?? null) ? 'No policies match these filters' : 'No service targets configured' }}</h2>
-                <p class="mt-2 text-sm leading-6 text-slate-600">{{ filled($filters['q'] ?? null) || filled($filters['status'] ?? null) ? 'Try another search term or status.' : 'Reports will not receive SLA deadlines until an administrator creates an active matching policy.' }}</p>
-            </div>
+            @if (filled($filters['q'] ?? null) || filled($filters['status'] ?? null))
+                <x-empty-state title="No policies match these filters" description="Try another search term or status, or clear the filters to see all service targets." :href="route('admin.sla-policies.index')" action="Clear filters" />
+            @else
+                <x-empty-state title="No service targets configured" description="Reports will not receive response or resolution targets until an administrator creates an active matching policy using the form above." />
+            @endif
         @endforelse
         @if ($policies->hasPages())
             <div>{{ $policies->links() }}</div>

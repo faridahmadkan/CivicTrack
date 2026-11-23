@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Citizen;
 
-use App\Http\Controllers\Controller;
 use App\Enums\CivicReportStatus;
+use App\Http\Controllers\Controller;
 use App\Models\CivicReport;
 use App\Models\WorkforceApplication;
 use Illuminate\Contracts\View\View;
@@ -18,7 +18,7 @@ class DashboardController extends Controller
 
         return view('citizen.home', [
             'recentReports' => (clone $reports)
-                ->with(['category', 'slaInstance'])
+                ->with(['category', 'location', 'slaInstance'])
                 ->orderByDesc('submitted_at')
                 ->limit(5)
                 ->get(),

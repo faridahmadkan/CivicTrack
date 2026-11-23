@@ -7,7 +7,7 @@
     <x-back-link href="{{ route('staff.reports.show', $workOrder->report) }}">Report {{ $workOrder->report->public_reference }}</x-back-link>
     <div class="mt-5 flex flex-wrap items-start justify-between gap-4">
         <div><p class="font-mono text-xs font-semibold text-slate-500">{{ $workOrder->reference }} · {{ $workOrder->organizationUnit->name }}</p><h1 class="mt-2 text-3xl font-semibold tracking-tight text-forest-950">{{ $workOrder->title }}</h1><p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{{ $workOrder->instructions ?: 'No work order instructions were added.' }}</p></div>
-        <span class="rounded-full bg-forest-50 px-3 py-1.5 text-xs font-semibold text-forest-900">{{ str($workOrder->status->value)->headline() }}</span>
+        <x-status-badge :status="$workOrder->status" />
     </div>
 
     <section class="mt-7 space-y-4" aria-label="Work tasks">
@@ -15,7 +15,7 @@
             <article class="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6">
                 <div class="flex flex-wrap items-start justify-between gap-3 border-b border-line pb-4">
                     <div><p class="font-mono text-[0.68rem] font-semibold text-slate-500">{{ $task->task_number }} · Step {{ $task->sequence }}</p><h2 class="mt-1 text-lg font-semibold text-forest-950">{{ $task->title }}</h2><p class="mt-1 text-sm leading-6 text-slate-600">{{ $task->instructions ?: 'No additional instructions.' }}</p></div>
-                    <span class="rounded-full bg-sand-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{{ $task->status->label() }} · {{ $task->priority->label() }}</span>
+                    <span class="flex flex-wrap items-center gap-2"><x-status-badge :status="$task->status" /><span class="rounded-full bg-sand-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{{ $task->priority->label() }}</span></span>
                 </div>
                 @if ($task->dependencies->isNotEmpty())<p class="mt-3 text-xs text-slate-500">Prerequisites: {{ $task->dependencies->pluck('title')->join(', ') }}</p>@endif
                 <div class="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
@@ -23,7 +23,7 @@
                         <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Assigned workers</p>
                         @if ($task->activeAssignments->isNotEmpty())
                             @foreach ($task->activeAssignments as $assignment)
-                            <p class="mt-1 text-sm font-semibold text-slate-800">{{ $assignment->worker->name }} <span class="font-normal text-slate-500">· {{ str($assignment->status->value)->replace('_', ' ')->headline() }}</span></p>
+                            <p class="mt-1 flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-800">{{ $assignment->worker->name }} <x-status-badge :status="$assignment->status" class="text-[0.65rem]" /></p>
                             @if ($assignment->assignment_instructions)<p class="mt-1 text-xs leading-5 text-slate-600">{{ $assignment->assignment_instructions }}</p>@endif
                                                     @endforeach
                         @else

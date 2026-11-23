@@ -10,7 +10,7 @@
         <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-600">Share the service issue and where it is happening. You can submit as a guest or sign in to keep your reports together.</p>
 
         @if ($categories->isEmpty())
-            <div class="mt-8 rounded-2xl border border-sand-100 bg-white p-6 text-sm leading-6 text-slate-600">The civic service catalog is not available yet. Please try again later.</div>
+            <x-empty-state class="mt-8" title="The service catalog is unavailable" description="There are no active public categories right now. Please try again later." />
         @else
             <div class="mt-8 rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-7">
                 @include('reports._form', ['action' => route('public.reports.store')])

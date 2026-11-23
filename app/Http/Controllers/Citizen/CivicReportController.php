@@ -24,10 +24,11 @@ class CivicReportController extends Controller
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', Rule::enum(CivicReportStatus::class)],
+            'scope' => ['nullable', Rule::in(['open', 'feedback_due'])],
         ]);
         $query = CivicReport::query()
             ->where('user_id', $request->user()->id)
-            ->with(['category', 'slaInstance']);
+            ->with(['category', 'location', 'slaInstance']);
 
         if (filled($filters['q'] ?? null)) {
             $search = '%'.trim($filters['q']).'%';
@@ -40,6 +41,20 @@ class CivicReportController extends Controller
 
         if (filled($filters['status'] ?? null)) {
             $query->where('status', $filters['status']);
+        }
+
+        if (($filters['scope'] ?? null) === 'open') {
+            $query->whereIn('status', [
+                CivicReportStatus::Submitted->value,
+                CivicReportStatus::UnderReview->value,
+                CivicReportStatus::NeedsInformation->value,
+                CivicReportStatus::Acknowledged->value,
+                CivicReportStatus::InProgress->value,
+                CivicReportStatus::Reopened->value,
+            ]);
+        } elseif (($filters['scope'] ?? null) === 'feedback_due') {
+            $query->where('status', CivicReportStatus::Resolved->value)
+                ->whereDoesntHave('serviceFeedback');
         }
 
         return view('citizen.reports.index', [
@@ -82,7 +97,9 @@ class CivicReportController extends Controller
         $report->load([
             'category',
             'location',
+            'statusEvents' => static fn ($query) => $query->where('citizen_visible', true),
             'attachments' => static fn ($query) => $query->where('visibility', ReportAttachmentVisibility::Reporter->value),
+            'comments' => static fn ($query) => $query->where('visibility', ReportCommentVisibility::Public->value),
             'slaInstance',
             'serviceFeedback',
             'reopenRequests.reviewer',

@@ -62,7 +62,11 @@
                     @if ($organizationUnit->description)<p class="mt-3 border-t border-line pt-3 text-xs leading-5 text-slate-500">{{ $organizationUnit->description }}</p>@endif
                 </article>
             @empty
-                <div class="rounded-2xl border border-dashed border-line bg-white px-6 py-12 text-center"><p class="text-sm font-semibold text-slate-800">{{ filled($filters['q'] ?? null) || filled($filters['type'] ?? null) || filled($filters['status'] ?? null) ? 'No organization units match these filters' : 'No organization units yet' }}</p><p class="mt-1 text-sm text-slate-500">{{ filled($filters['q'] ?? null) || filled($filters['type'] ?? null) || filled($filters['status'] ?? null) ? 'Try another search term, type, or status.' : 'Add a department to start structuring the service organization.' }}</p></div>
+                @if (filled($filters['q'] ?? null) || filled($filters['type'] ?? null) || filled($filters['status'] ?? null))
+                    <x-empty-state title="No organization units match these filters" description="Try another search term, type, or status, or clear the filters to see all units." :href="route('admin.organization-units.index')" action="Clear filters" />
+                @else
+                    <x-empty-state title="No organization units yet" description="Add a department using the form at the left to start structuring the service organization." />
+                @endif
             @endforelse
             @if ($organizationUnits->hasPages())
                 <div class="mt-4">{{ $organizationUnits->links() }}</div>

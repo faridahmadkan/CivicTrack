@@ -52,6 +52,7 @@ class AdminDashboardTest extends TestCase
             ->assertSee('Overdue service targets')
             ->assertSee('Reopen reviews')
             ->assertSee('aria-current="page"', false)
-            ->assertSee('4.0 / 5');
+            ->assertSee(route('staff.reports.index', ['preset' => 'overdue']), false)
+            ->assertSee(route('staff.reports.index', ['preset' => 'reopen_requests']), false);
     }
 }

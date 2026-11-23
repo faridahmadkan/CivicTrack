@@ -1,22 +1,45 @@
 <form method="POST" action="{{ $action }}" enctype="multipart/form-data" class="space-y-6">
     @csrf
     <div class="grid gap-5 sm:grid-cols-2">
-        <label class="block text-sm font-semibold text-slate-800 sm:col-span-2">Service category
-            <select name="service_category_id" required class="mt-2 w-full rounded-xl border border-line bg-white px-3.5 py-3 text-sm font-normal text-slate-800">
-                <option value="">Select the service that best fits</option>
+        <fieldset class="sm:col-span-2" aria-describedby="service-category-help" aria-invalid="{{ $errors->has('service_category_id') ? 'true' : 'false' }}">
+            <legend class="text-sm font-semibold text-slate-800">Choose a service category</legend>
+            <p id="service-category-help" class="mt-1 text-xs leading-5 text-slate-600">Select the category that best matches the issue. Use the arrow keys to move between options.</p>
+            <div class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 @foreach ($categories as $category)
-                    <option value="{{ $category->id }}" @selected(old('service_category_id') == $category->id)>{{ $category->name }}</option>
+                    <label for="service-category-{{ $category->id }}" class="group cursor-pointer rounded-2xl border border-line bg-white p-4 transition-colors hover:border-forest-300 hover:bg-forest-50/50 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-forest-700 has-[:checked]:border-forest-700 has-[:checked]:bg-forest-50 has-[:checked]:ring-1 has-[:checked]:ring-forest-700">
+                        <input
+                            id="service-category-{{ $category->id }}"
+                            class="peer sr-only"
+                            type="radio"
+                            name="service_category_id"
+                            value="{{ $category->id }}"
+                            required
+                            @checked(old('service_category_id') == $category->id)
+                            aria-invalid="{{ $errors->has('service_category_id') ? 'true' : 'false' }}"
+                            aria-describedby="service-category-help{{ $errors->has('service_category_id') ? ' service-category-error' : '' }}"
+                        >
+                        <span class="flex items-start gap-3">
+                            <x-service-category-icon :category="$category" />
+                            <span class="min-w-0 flex-1">
+                                <span class="block text-sm font-semibold text-forest-950">{{ $category->name }}</span>
+                                <span class="mt-1.5 block text-xs leading-5 text-slate-600">{{ $category->description ?: 'Choose this category for related civic service issues.' }}</span>
+                                <span class="mt-3 inline-flex rounded-full bg-sand-100 px-2.5 py-1 text-[0.68rem] font-semibold text-slate-700">Location {{ $category->requires_location ? 'required' : 'optional' }}</span>
+                            </span>
+                        </span>
+                    </label>
                 @endforeach
-            </select>
-            @error('service_category_id')<span class="mt-1 block text-xs font-medium text-coral-600">{{ $message }}</span>@enderror
-        </label>
+            </div>
+            @error('service_category_id')<span id="service-category-error" class="mt-2 block text-xs font-medium text-coral-600" role="alert">{{ $message }}</span>@enderror
+        </fieldset>
         <label class="block text-sm font-semibold text-slate-800 sm:col-span-2">Short title
-            <input name="title" value="{{ old('title') }}" maxlength="160" required class="mt-2 w-full rounded-xl border border-line bg-white px-3.5 py-3 text-sm font-normal" placeholder="For example, damaged sidewalk on Oak Street">
-            @error('title')<span class="mt-1 block text-xs font-medium text-coral-600">{{ $message }}</span>@enderror
+            <input name="title" value="{{ old('title') }}" maxlength="160" required aria-invalid="{{ $errors->has('title') ? 'true' : 'false' }}" aria-describedby="title-help{{ $errors->has('title') ? ' title-error' : '' }}" class="mt-2 w-full rounded-xl border border-line bg-white px-3.5 py-3 text-sm font-normal" placeholder="For example, damaged sidewalk on Oak Street">
+            <span id="title-help" class="mt-1 block text-xs font-normal text-slate-500">A short title helps service teams find the report.</span>
+            @error('title')<span id="title-error" class="mt-1 block text-xs font-medium text-coral-600" role="alert">{{ $message }}</span>@enderror
         </label>
         <label class="block text-sm font-semibold text-slate-800 sm:col-span-2">What is happening?
-            <textarea name="description" rows="5" maxlength="5000" required class="mt-2 w-full rounded-xl border border-line bg-white px-3.5 py-3 text-sm font-normal leading-6" placeholder="Describe the issue, when you noticed it, and any detail that could help the service team.">{{ old('description') }}</textarea>
-            @error('description')<span class="mt-1 block text-xs font-medium text-coral-600">{{ $message }}</span>@enderror
+            <textarea name="description" rows="5" maxlength="5000" required aria-invalid="{{ $errors->has('description') ? 'true' : 'false' }}" aria-describedby="description-help{{ $errors->has('description') ? ' description-error' : '' }}" class="mt-2 w-full rounded-xl border border-line bg-white px-3.5 py-3 text-sm font-normal leading-6" placeholder="Describe the issue, when you noticed it, and any detail that could help the service team.">{{ old('description') }}</textarea>
+            <span id="description-help" class="mt-1 block text-xs font-normal text-slate-500">Include when you noticed it and any details that could help the service team.</span>
+            @error('description')<span id="description-error" class="mt-1 block text-xs font-medium text-coral-600" role="alert">{{ $message }}</span>@enderror
         </label>
     </div>
 
@@ -87,6 +110,6 @@
 
     <div class="flex flex-col gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
         <p class="max-w-xl text-xs leading-5 text-slate-500">Submitting a report shares its details and precise location with the responsible public service team.</p>
-        <button type="submit" @disabled($categories->isEmpty()) class="shrink-0 rounded-lg bg-forest-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-forest-800 disabled:cursor-not-allowed disabled:opacity-50">Submit report</button>
+        <button type="submit" @disabled($categories->isEmpty()) class="button-primary shrink-0 px-5 py-3">Submit report</button>
     </div>
 </form>

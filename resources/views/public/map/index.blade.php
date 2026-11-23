@@ -11,7 +11,7 @@
                 <h1 class="mt-2 text-3xl font-semibold tracking-tight text-forest-950 sm:text-4xl">Published service reports</h1>
                 <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-600">Explore reports that service teams approved for public listing. Map markers use generalized locations; private contact details, exact coordinates, and report attachments are not displayed.</p>
             </div>
-            <a href="{{ route('public.reports.create') }}" class="rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-forest-800">Report an issue</a>
+            <a href="{{ route('public.reports.create') }}" class="button-primary">Report an issue</a>
         </div>
 
         <form method="GET" action="{{ route('public.map.index') }}" class="mt-6 flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-white p-4 shadow-sm">
@@ -23,7 +23,7 @@
                     @endforeach
                 </select>
             </label>
-            <button class="rounded-lg border border-line bg-white px-4 py-2.5 text-sm font-semibold text-forest-900 hover:bg-forest-50">Filter map</button>
+            <button class="button-secondary">Filter map</button>
             @if (! empty($filters['category_id']))<a href="{{ route('public.map.index') }}" class="px-2 py-2.5 text-sm font-semibold text-slate-600 hover:text-forest-900">Clear filter</a>@endif
             <span class="ml-auto text-xs text-slate-500">{{ $reports->count() }} published report{{ $reports->count() === 1 ? '' : 's' }}{{ $reports->count() === 500 ? ' · showing the latest 500' : '' }}</span>
         </form>
@@ -69,11 +69,15 @@
             </div>
             @forelse ($reports as $report)
                 <article class="flex flex-wrap items-center justify-between gap-3 border-b border-line p-5 last:border-0 sm:px-6">
-                    <div><p class="text-sm font-semibold text-slate-900">{{ $report->category->name }}</p><p class="mt-1 text-xs text-slate-500">Published {{ $report->submitted_at->format('M j, Y') }}</p></div>
-                    <span class="rounded-full bg-forest-50 px-2.5 py-1 text-xs font-semibold text-forest-900">{{ $report->status->label() }}</span>
+                    <div><p class="text-sm font-semibold text-slate-900">{{ $report->category->name }}</p><p class="mt-1 text-xs text-slate-500">Published {{ $report->submitted_at->format('M j, Y') }}</p><p class="mt-1 text-xs text-slate-600">Approximate location shown on the map</p></div>
+                    <x-status-badge :status="$report->status" />
                 </article>
             @empty
-                <div class="p-8 text-center sm:p-12"><h3 class="text-base font-semibold text-slate-900">No reports are published on the map</h3><p class="mt-2 text-sm leading-6 text-slate-600">Reports appear after a service team approves a generalized public listing.</p></div>
+                @if (filled($filters['category_id'] ?? null))
+                    <x-empty-state title="No public reports match this category" description="Clear the category filter to see all reports approved for the public map." :href="route('public.map.index')" action="Clear category filter" />
+                @else
+                    <x-empty-state title="No reports are published on the map" description="Reports appear after a service team approves a generalized public listing." :href="route('public.reports.create')" action="Report a service issue" />
+                @endif
             @endforelse
         </section>
     </section>

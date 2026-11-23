@@ -4,6 +4,7 @@
 @section('eyebrow', 'Accountability and system history')
 
 @section('content')
+    @php($hasActiveFilters = filled($filters['q'] ?? null) || filled($filters['event_key'] ?? null) || filled($filters['actor_id'] ?? null) || filled($filters['from'] ?? null) || filled($filters['to'] ?? null))
     <x-back-link href="{{ route('admin.home') }}" class="mb-6">Administration home</x-back-link>
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -66,10 +67,11 @@
                 </details>
             </article>
         @empty
-            <div class="p-8 text-center sm:p-12">
-                <h2 class="text-base font-semibold text-slate-900">No audit events match these filters</h2>
-                <p class="mt-2 text-sm text-slate-600">Try a different event, actor, or date range.</p>
-            </div>
+            @if ($hasActiveFilters)
+                <x-empty-state title="No audit events match these filters" description="Try a different event, actor, or date range, or clear the filters to see recent activity." :href="route('admin.audit-events.index')" action="Clear filters" />
+            @else
+                <x-empty-state title="No audit events recorded yet" description="Administrative and service decisions will appear here as they are recorded." />
+            @endif
         @endforelse
         @if ($events->hasPages())
             <div class="border-t border-line px-5 py-4 sm:px-6">{{ $events->links() }}</div>

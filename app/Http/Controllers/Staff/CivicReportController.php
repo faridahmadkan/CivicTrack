@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Staff;
 use App\Enums\CivicReportPriority;
 use App\Enums\CivicReportStatus;
 use App\Enums\ReportCommentVisibility;
+use App\Enums\ReportReopenStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LinkRelatedReportRequest;
 use App\Http\Requests\ResolveDuplicateReportRequest;
@@ -30,7 +31,18 @@ class CivicReportController extends Controller
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', Rule::enum(CivicReportStatus::class)],
+            'preset' => ['nullable', Rule::in([
+                'all_open', 'urgent', 'overdue', 'needs_information', 'active_work', 'reopen_requests',
+            ])],
         ]);
+        $openStatuses = [
+            CivicReportStatus::Submitted->value,
+            CivicReportStatus::UnderReview->value,
+            CivicReportStatus::NeedsInformation->value,
+            CivicReportStatus::Acknowledged->value,
+            CivicReportStatus::InProgress->value,
+            CivicReportStatus::Reopened->value,
+        ];
         $scopeQuery = CivicReport::query();
 
         if (! $request->user()->can('reports.manage.all')) {
@@ -45,11 +57,24 @@ class CivicReportController extends Controller
         }
 
         $query = (clone $scopeQuery)
-            ->with(['category', 'routedUnit', 'slaInstance'])
+            ->with(['category', 'location', 'routedUnit', 'slaInstance'])
             ->orderByRaw("CASE priority WHEN 'urgent' THEN 1 WHEN 'high' THEN 2 WHEN 'normal' THEN 3 ELSE 4 END")
             ->orderBy('submitted_at');
 
-        if (filled($filters['status'] ?? null)) {
+        if (($filters['preset'] ?? null) === 'all_open') {
+            $query->whereIn('status', $openStatuses);
+        } elseif (($filters['preset'] ?? null) === 'urgent') {
+            $query->whereIn('status', $openStatuses)->where('priority', CivicReportPriority::Urgent->value);
+        } elseif (($filters['preset'] ?? null) === 'overdue') {
+            $this->applyOverdueScope($query->whereIn('status', $openStatuses));
+        } elseif (($filters['preset'] ?? null) === 'needs_information') {
+            $query->where('status', CivicReportStatus::NeedsInformation->value);
+        } elseif (($filters['preset'] ?? null) === 'active_work') {
+            $query->whereIn('status', [CivicReportStatus::Acknowledged->value, CivicReportStatus::InProgress->value]);
+        } elseif (($filters['preset'] ?? null) === 'reopen_requests') {
+            $query->whereHas('reopenRequests', static fn (Builder $requests) => $requests
+                ->where('status', ReportReopenStatus::Pending->value));
+        } elseif (filled($filters['status'] ?? null)) {
             $query->where('status', $filters['status']);
         } else {
             $query->whereIn('status', [
@@ -57,6 +82,10 @@ class CivicReportController extends Controller
                 CivicReportStatus::UnderReview->value,
                 CivicReportStatus::Reopened->value,
             ]);
+        }
+
+        if (filled($filters['preset'] ?? null) && filled($filters['status'] ?? null)) {
+            $query->where('status', $filters['status']);
         }
 
         if (filled($filters['q'] ?? null)) {
@@ -81,20 +110,31 @@ class CivicReportController extends Controller
                 CivicReportStatus::Acknowledged->value,
                 CivicReportStatus::InProgress->value,
             ])->count(),
-            'overdueCount' => (clone $scopeQuery)->whereHas('slaInstance', static function (Builder $sla): void {
-                $sla->whereIn('state', ['active', 'breached'])
-                    ->whereNull('resolved_at')
-                    ->where(function (Builder $targets): void {
-                        $targets->whereNotNull('first_response_breached_at')
-                            ->orWhereNotNull('resolution_breached_at')
-                            ->orWhere(function (Builder $response): void {
-                                $response->whereNull('first_response_at')
-                                    ->where('first_response_due_at', '<', now());
-                            })
-                            ->orWhere('resolution_due_at', '<', now());
-                    });
-            })->count(),
+            'overdueCount' => $this->applyOverdueScope((clone $scopeQuery)->whereIn('status', $openStatuses))->count(),
+            'urgentCount' => (clone $scopeQuery)->whereIn('status', $openStatuses)
+                ->where('priority', CivicReportPriority::Urgent->value)->count(),
+            'needsInformationCount' => (clone $scopeQuery)
+                ->where('status', CivicReportStatus::NeedsInformation->value)->count(),
+            'reopenReviewCount' => (clone $scopeQuery)->whereHas('reopenRequests', static fn (Builder $requests) => $requests
+                ->where('status', ReportReopenStatus::Pending->value))->count(),
         ]);
+    }
+
+    private function applyOverdueScope(Builder $reports): Builder
+    {
+        return $reports->whereHas('slaInstance', static function (Builder $sla): void {
+            $sla->whereIn('state', ['active', 'breached'])
+                ->whereNull('resolved_at')
+                ->where(function (Builder $targets): void {
+                    $targets->whereNotNull('first_response_breached_at')
+                        ->orWhereNotNull('resolution_breached_at')
+                        ->orWhere(function (Builder $response): void {
+                            $response->whereNull('first_response_at')
+                                ->where('first_response_due_at', '<', now());
+                        })
+                        ->orWhere('resolution_due_at', '<', now());
+                });
+        });
     }
 
     public function show(Request $request, CivicReport $civicReport): View

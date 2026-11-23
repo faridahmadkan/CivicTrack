@@ -127,10 +127,11 @@
                     <div class="mt-4 flex justify-end"><button class="rounded-lg border border-line bg-white px-4 py-2.5 text-sm font-semibold text-forest-900 transition hover:bg-forest-50">Save changes</button></div>
                 </form>
             @empty
-                <div class="rounded-2xl border border-dashed border-line bg-white p-8 text-center">
-                    <h2 class="text-base font-semibold text-slate-800">{{ filled($filters['q'] ?? null) || filled($filters['status'] ?? null) || filled($filters['visibility'] ?? null) ? 'No categories match these filters' : 'No categories configured' }}</h2>
-                    <p class="mt-2 text-sm leading-6 text-slate-600">{{ filled($filters['q'] ?? null) || filled($filters['status'] ?? null) || filled($filters['visibility'] ?? null) ? 'Try another search term, status, or visibility.' : 'Add service categories here, or run the initial database seeder to install the standard civic service catalog.' }}</p>
-                </div>
+                @if (filled($filters['q'] ?? null) || filled($filters['status'] ?? null) || filled($filters['visibility'] ?? null))
+                    <x-empty-state title="No categories match these filters" description="Try another search term, status, or visibility, or clear the filters to see the full catalog." :href="route('admin.service-categories.index')" action="Clear filters" />
+                @else
+                    <x-empty-state title="No categories configured" description="Add a service category using the form at the left, or run the initial database seeder to install the standard civic catalog." />
+                @endif
             @endforelse
             @if ($categories->hasPages())
                 <div>{{ $categories->links() }}</div>

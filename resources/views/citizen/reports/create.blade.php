@@ -10,7 +10,7 @@
         <p class="mt-3 text-sm leading-6 text-slate-600">Your report will be routed to the configured service unit, or placed in the shared triage queue if no route is configured.</p>
         <div class="mt-7 rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-7">
             @if ($categories->isEmpty())
-                <p class="text-sm leading-6 text-slate-600">The civic service catalog is not available yet. Please try again later.</p>
+                <x-empty-state title="The service catalog is unavailable" description="There are no active public categories right now. Please try again later." />
             @else
                 @include('reports._form', ['action' => route('citizen.reports.store')])
             @endif

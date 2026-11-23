@@ -27,6 +27,7 @@ class TaskController extends Controller
                 TaskAssignmentStatus::Submitted->value,
                 TaskAssignmentStatus::NeedsRework->value,
             ])],
+            'bucket' => ['nullable', Rule::in(['awaiting_response', 'in_progress', 'awaiting_verification'])],
         ]);
         $baseQuery = $request->user()->taskAssignments()
             ->whereNull('ended_at')
@@ -42,8 +43,20 @@ class TaskController extends Controller
             ->groupBy('status')
             ->pluck('aggregate', 'status');
         $assignmentsQuery = (clone $baseQuery)
-            ->with('task.workOrder.report')
+            ->with(['task.workOrder.report.category', 'task.workOrder.report.location'])
             ->orderByDesc('assigned_at');
+
+        if (($filters['bucket'] ?? null) === 'awaiting_response') {
+            $assignmentsQuery->where('status', TaskAssignmentStatus::Assigned->value);
+        } elseif (($filters['bucket'] ?? null) === 'in_progress') {
+            $assignmentsQuery->whereIn('status', [
+                TaskAssignmentStatus::Accepted->value,
+                TaskAssignmentStatus::InProgress->value,
+                TaskAssignmentStatus::NeedsRework->value,
+            ]);
+        } elseif (($filters['bucket'] ?? null) === 'awaiting_verification') {
+            $assignmentsQuery->where('status', TaskAssignmentStatus::Submitted->value);
+        }
 
         if (filled($filters['q'] ?? null)) {
             $search = '%'.trim($filters['q']).'%';

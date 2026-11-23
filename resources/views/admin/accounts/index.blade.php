@@ -4,6 +4,7 @@
 @section('eyebrow', 'Identity and access')
 
 @section('content')
+    @php($hasActiveFilters = filled($filters['q'] ?? null) || filled($filters['role'] ?? null) || filled($filters['status'] ?? null))
     <div>
         <p class="text-xs font-bold uppercase tracking-[0.18em] text-forest-700">Server-managed accounts</p>
         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-forest-950">Account provisioning</h1>
@@ -87,7 +88,7 @@
                                 @foreach ($account->roles as $role)
                                     <span class="rounded-full bg-forest-50 px-2.5 py-1 text-[0.68rem] font-semibold text-forest-800">{{ str($role->name)->headline() }}</span>
                                 @endforeach
-                                <span class="rounded-full bg-sand-100 px-2.5 py-1 text-[0.68rem] font-semibold text-slate-700">{{ str($account->account_status->value)->headline() }}</span>
+                                <x-status-badge :status="$account->account_status" />
                             </div>
                         </div>
                         <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
@@ -107,7 +108,11 @@
                         @endforeach
                     </article>
                 @empty
-                    <div class="px-6 py-12 text-center"><p class="text-sm font-semibold text-slate-800">No accounts found</p><p class="mt-1 text-sm text-slate-500">Created accounts will appear here.</p></div>
+                    @if ($hasActiveFilters)
+                        <x-empty-state title="No accounts match these filters" description="Try another name, role, or account status, or clear the filters to see all accounts." :href="route('admin.accounts.index')" action="Clear filters" />
+                    @else
+                        <x-empty-state title="No accounts found" description="Created accounts will appear here." />
+                    @endif
                 @endforelse
             </div>
             <div class="mt-4">{{ $accounts->links() }}</div>

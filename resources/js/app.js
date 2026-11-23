@@ -418,3 +418,57 @@ document.querySelectorAll('[data-public-report-map]').forEach((element) => {
 
     initializePlaceSearch(map, element);
 });
+
+const initializeLocationPreview = (element) => {
+    const latitude = Number(element.dataset.latitude);
+    const longitude = Number(element.dataset.longitude);
+    const tileUrl = element.dataset.tileUrl;
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        return;
+    }
+
+    const map = L.map(element, {
+        zoomControl: false,
+        dragging: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        keyboard: false,
+        touchZoom: false,
+        attributionControl: Boolean(tileUrl),
+    }).setView([latitude, longitude], element.dataset.publicLocation === 'true' ? 12 : 15);
+
+    if (tileUrl) {
+        L.tileLayer(tileUrl, {
+            attribution: element.dataset.tileAttribution,
+            maxZoom: 19,
+        }).addTo(map);
+    }
+
+    L.circleMarker([latitude, longitude], {
+        radius: 6,
+        color: '#ffffff',
+        weight: 2,
+        fillColor: '#205044',
+        fillOpacity: 1,
+        interactive: false,
+    }).addTo(map);
+};
+
+const locationPreviews = [...document.querySelectorAll('[data-location-preview]')];
+
+if ('IntersectionObserver' in window) {
+    const locationPreviewObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+                initializeLocationPreview(entry.target);
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { rootMargin: '120px' });
+
+    locationPreviews.forEach((element) => locationPreviewObserver.observe(element));
+} else {
+    locationPreviews.forEach(initializeLocationPreview);
+}

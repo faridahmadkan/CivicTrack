@@ -5,6 +5,21 @@
     $pendingReopenRequest = $report->reopenRequests->firstWhere('status', App\Enums\ReportReopenStatus::Pending);
     $reopenDeadline = $report->resolved_at?->copy()->addDays((int) config('civictrack.feedback.reopen_window_days', 30));
     $disputeDeadline = ($report->resolved_at ?? $report->closed_at)?->copy()->addDays((int) config('civictrack.feedback.reopen_window_days', 30));
+    $timelineItems = $report->statusEvents
+        ->map(static fn ($event): object => (object) [
+            'to_status' => $event->to_status,
+            'event_type' => $event->event_type,
+            'reason' => $event->reason,
+            'occurred_at' => $event->occurred_at,
+        ])
+        ->concat($report->comments->map(static fn ($comment): object => (object) [
+            'to_status' => null,
+            'event_type' => 'resident_update',
+            'reason' => $comment->body,
+            'occurred_at' => $comment->created_at,
+        ]))
+        ->sortBy(static fn (object $item): int => $item->occurred_at->getTimestamp())
+        ->values();
 @endphp
 
 <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]">
@@ -16,7 +31,7 @@
                     <h1 class="mt-2 text-2xl font-semibold tracking-tight text-forest-950">{{ $report->title }}</h1>
                     <p class="mt-2 text-sm text-slate-600">{{ $report->category->name }} · submitted {{ $report->submitted_at->format('M j, Y · g:i A') }}</p>
                 </div>
-                <span class="rounded-full bg-forest-50 px-3 py-1.5 text-xs font-semibold text-forest-900">{{ $report->status->label() }}</span>
+                <x-status-badge :status="$report->status" class="px-3 py-1.5" />
             </div>
             <div class="mt-6 border-t border-line pt-5">
                 <h2 class="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Issue details</h2>
@@ -34,40 +49,34 @@
         </section>
 
         <section class="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-7" aria-labelledby="report-history-heading">
-            <h2 id="report-history-heading" class="text-base font-semibold text-forest-950">Service updates</h2>
-            <ol class="mt-5 space-y-0">
-                @foreach ($report->statusEvents as $event)
+            <h2 id="report-history-heading" class="text-base font-semibold text-forest-950">Progress timeline</h2>
+            <p class="mt-1 text-xs leading-5 text-slate-500">Status changes and public updates for this report.</p>
+            <ol class="mt-5 space-y-0" aria-label="Citizen-visible report progress">
+                @forelse ($timelineItems as $event)
                     <li class="relative flex gap-4 pb-6 last:pb-0">
-                        <span class="relative mt-1 flex size-3 shrink-0 rounded-full bg-forest-700"><span class="absolute left-1/2 top-3 h-full w-px -translate-x-1/2 bg-line last:hidden"></span></span>
+                        @unless ($loop->last)<span class="absolute bottom-0 left-[0.34rem] top-3 w-px bg-line" aria-hidden="true"></span>@endunless
+                        <span class="relative z-10 mt-1 size-3 shrink-0 rounded-full {{ $event->to_status ? 'bg-forest-700 ring-4 ring-forest-50' : 'bg-slate-400 ring-4 ring-slate-100' }}" aria-hidden="true"></span>
                         <div class="min-w-0">
                             <p class="text-sm font-semibold text-slate-800">{{ $event->to_status?->label() ?? str($event->event_type)->headline() }}</p>
-                            <p class="mt-1 text-xs text-slate-500">{{ $event->occurred_at->format('M j, Y · g:i A') }}</p>
+                            <time class="mt-1 block text-xs text-slate-500" datetime="{{ $event->occurred_at->toIso8601String() }}">{{ $event->occurred_at->format('M j, Y · g:i A') }}</time>
                             @if ($event->reason)<p class="mt-2 text-sm leading-6 text-slate-600">{{ $event->reason }}</p>@endif
                         </div>
                     </li>
-                @endforeach
+                @empty
+                    <li class="text-sm text-slate-500">No public updates have been recorded yet.</li>
+                @endforelse
             </ol>
         </section>
 
         <section class="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-7" aria-labelledby="report-comments-heading">
-            <h2 id="report-comments-heading" class="text-base font-semibold text-forest-950">Your updates</h2>
-            <div class="mt-4 space-y-3">
-                @forelse ($report->comments as $comment)
-                    <article class="rounded-xl bg-sand-50 p-4">
-                        <div class="flex flex-wrap justify-between gap-2 text-xs text-slate-500"><span>{{ $comment->author_label ?: 'You' }}</span><time>{{ $comment->created_at->format('M j, Y · g:i A') }}</time></div>
-                        <p class="mt-2 whitespace-pre-line text-sm leading-6 text-slate-700">{{ $comment->body }}</p>
-                    </article>
-                @empty
-                    <p class="text-sm text-slate-500">No updates have been added yet.</p>
-                @endforelse
-            </div>
+            <h2 id="report-comments-heading" class="text-base font-semibold text-forest-950">Report follow-up</h2>
             @unless ($report->status->isTerminal())
                 <form method="POST" action="{{ route($commentRoute, $report) }}" class="mt-5 border-t border-line pt-5">
                     @csrf
                     <label class="block text-sm font-semibold text-slate-800">Add an update
                         <textarea name="body" rows="3" maxlength="3000" required class="mt-2 w-full rounded-xl border border-line px-3.5 py-3 text-sm font-normal" placeholder="Share a clarification or answer a service team's question.">{{ old('body') }}</textarea>
                     </label>
-                    <button class="mt-3 rounded-lg border border-line bg-white px-4 py-2.5 text-sm font-semibold text-forest-900 transition hover:bg-forest-50">Send update</button>
+                    <button class="button-secondary mt-3">Send update</button>
                 </form>
             @endunless
             @if ($report->serviceFeedback)
@@ -94,7 +103,7 @@
                     <label class="mt-3 block text-sm font-semibold text-slate-700">Comment <span class="font-normal text-slate-500">(optional)</span>
                         <textarea name="comment" rows="3" maxlength="2000" class="mt-1.5 w-full rounded-xl border border-line px-3 py-2.5 text-sm font-normal">{{ old('comment') }}</textarea>
                     </label>
-                    <button class="mt-3 rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-forest-800">Submit feedback</button>
+                    <button class="button-primary mt-3">Submit feedback</button>
                 </form>
             @endif
         </section>
@@ -103,7 +112,7 @@
     <aside class="space-y-5">
         <section class="rounded-2xl border border-line bg-white p-5 shadow-sm">
             <h2 class="text-sm font-semibold text-forest-950">Current service status</h2>
-            <p class="mt-3 text-sm leading-6 text-slate-700">{{ $report->status->label() }}</p>
+            <p class="mt-3"><x-status-badge :status="$report->status" /></p>
             <p class="mt-2 text-xs leading-5 text-slate-500">Priority: {{ $report->priority->label() }}</p>
         </section>
         @if ($report->slaInstance && $report->slaInstance->state !== App\Enums\ReportSlaState::NotApplicable)
@@ -172,7 +181,7 @@
                     <label class="block text-xs font-semibold text-slate-700">Why should this report be reopened?
                         <textarea name="reason" rows="3" maxlength="2000" required class="mt-1.5 w-full rounded-xl border border-line px-3 py-2.5 text-sm font-normal">{{ old('reason') }}</textarea>
                     </label>
-                    <button class="mt-3 rounded-lg border border-line bg-white px-4 py-2.5 text-sm font-semibold text-forest-900 hover:bg-forest-50">Request review</button>
+                    <button class="button-secondary mt-3">Request review</button>
                 </form>
             </section>
         @endif
@@ -185,7 +194,7 @@
                     <label class="block text-xs font-semibold text-slate-700">Reason for cancellation
                         <textarea name="reason" rows="3" minlength="3" maxlength="1000" required class="mt-1.5 w-full rounded-xl border border-line px-3 py-2.5 text-sm font-normal">{{ old('reason') }}</textarea>
                     </label>
-                    <button class="mt-3 rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-forest-900 hover:bg-forest-50">Cancel report</button>
+                    <button class="button-danger mt-3">Cancel report</button>
                 </form>
             </section>
         @endif
@@ -198,7 +207,7 @@
                     <label class="block text-xs font-semibold text-amber-950">Why should the outcome be reviewed?
                         <textarea name="reason" rows="3" minlength="3" maxlength="2000" required class="mt-1.5 w-full rounded-xl border border-amber-200 bg-white px-3 py-2.5 text-sm font-normal">{{ old('reason') }}</textarea>
                     </label>
-                    <button class="mt-3 rounded-lg bg-amber-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-800">Request outcome review</button>
+                    <button class="button-danger mt-3">Request outcome review</button>
                 </form>
             </section>
         @endif

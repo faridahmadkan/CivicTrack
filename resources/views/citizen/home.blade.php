@@ -9,14 +9,14 @@
             <h1 class="mt-2 text-3xl font-semibold tracking-tight text-forest-950">Good to see you, {{ auth()->user()->name }}</h1>
             <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Track the issues you reported, follow service decisions, and respond when a team needs more information.</p>
         </div>
-        <a href="{{ route('citizen.reports.create') }}" class="rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-forest-800">Report a service issue</a>
+        <a href="{{ route('citizen.reports.create') }}" class="button-primary">Report a service issue</a>
     </div>
 
     <section class="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Citizen report summary">
-        <article class="rounded-2xl border border-line bg-white p-5 shadow-sm"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Reports submitted</p><p class="mt-3 text-3xl font-semibold tracking-tight text-forest-950">{{ number_format($totalReports) }}</p></article>
-        <article class="rounded-2xl border border-line bg-white p-5 shadow-sm"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Open with service teams</p><p class="mt-3 text-3xl font-semibold tracking-tight text-forest-950">{{ number_format($openReports) }}</p></article>
-        <article class="rounded-2xl border border-line bg-white p-5 shadow-sm"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Resolved</p><p class="mt-3 text-3xl font-semibold tracking-tight text-forest-950">{{ number_format($resolvedReports) }}</p></article>
-        <article class="rounded-2xl border border-line bg-white p-5 shadow-sm"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Feedback to provide</p><p class="mt-3 text-3xl font-semibold tracking-tight text-forest-950">{{ number_format($feedbackDue) }}</p></article>
+        <a href="{{ route('citizen.reports.index') }}" class="group rounded-2xl border border-line bg-white p-5 shadow-sm transition hover:border-forest-200 hover:bg-forest-50/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Reports submitted</p><p class="mt-3 text-3xl font-semibold tracking-tight text-forest-950">{{ number_format($totalReports) }}</p><span class="mt-2 inline-flex text-xs font-semibold text-forest-800">View your reports <span aria-hidden="true" class="ml-1 transition-transform group-hover:translate-x-0.5">→</span></span></a>
+        <a href="{{ route('citizen.reports.index', ['scope' => 'open']) }}" class="group rounded-2xl border border-line bg-white p-5 shadow-sm transition hover:border-forest-200 hover:bg-forest-50/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Open with service teams</p><p class="mt-3 text-3xl font-semibold tracking-tight text-forest-950">{{ number_format($openReports) }}</p><span class="mt-2 inline-flex text-xs font-semibold text-forest-800">Track open reports <span aria-hidden="true" class="ml-1 transition-transform group-hover:translate-x-0.5">→</span></span></a>
+        <a href="{{ route('citizen.reports.index', ['status' => App\Enums\CivicReportStatus::Resolved->value]) }}" class="group rounded-2xl border border-line bg-white p-5 shadow-sm transition hover:border-forest-200 hover:bg-forest-50/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Resolved</p><p class="mt-3 text-3xl font-semibold tracking-tight text-forest-950">{{ number_format($resolvedReports) }}</p><span class="mt-2 inline-flex text-xs font-semibold text-forest-800">Review resolved reports <span aria-hidden="true" class="ml-1 transition-transform group-hover:translate-x-0.5">→</span></span></a>
+        <a href="{{ route('citizen.reports.index', ['scope' => 'feedback_due']) }}" class="group rounded-2xl border border-line bg-white p-5 shadow-sm transition hover:border-forest-200 hover:bg-forest-50/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Feedback to provide</p><p class="mt-3 text-3xl font-semibold tracking-tight text-forest-950">{{ number_format($feedbackDue) }}</p><span class="mt-2 inline-flex text-xs font-semibold text-forest-800">Rate a service response <span aria-hidden="true" class="ml-1 transition-transform group-hover:translate-x-0.5">→</span></span></a>
     </section>
 
     <section class="mt-8 overflow-hidden rounded-2xl border border-line bg-white shadow-sm" aria-labelledby="recent-reports-heading">
@@ -25,12 +25,13 @@
             <a href="{{ route('citizen.reports.index') }}" class="text-sm font-semibold text-forest-800 hover:text-forest-950">View all reports</a>
         </div>
         @forelse ($recentReports as $report)
-            <a href="{{ route('citizen.reports.show', $report) }}" class="flex flex-col gap-3 border-b border-line p-5 transition last:border-0 hover:bg-sand-50 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-                <span class="min-w-0"><span class="block truncate text-sm font-semibold text-slate-900">{{ $report->title }}</span><span class="mt-1 block text-xs text-slate-500">{{ $report->category->name }} · {{ $report->public_reference }} · {{ $report->submitted_at->format('M j, Y') }}</span></span>
-                <span class="flex shrink-0 items-center gap-3"><span class="rounded-full bg-forest-50 px-2.5 py-1 text-xs font-semibold text-forest-900">{{ $report->status->label() }}</span><span aria-hidden="true" class="text-slate-400">→</span></span>
-            </a>
+            <article class="flex flex-col gap-4 border-b border-line p-5 transition last:border-0 hover:bg-sand-50 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                <a href="{{ route('citizen.reports.show', $report) }}" class="group min-w-0 flex-1 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700"><span class="block truncate text-sm font-semibold text-slate-900 group-hover:text-forest-800">{{ $report->title }}</span><span class="mt-1 block text-xs text-slate-500">{{ $report->category->name }} · {{ $report->public_reference }} · {{ $report->submitted_at->format('M j, Y') }}</span><span class="mt-2 inline-flex text-xs font-semibold text-forest-800">Open report <span aria-hidden="true" class="ml-1">→</span></span></a>
+                <x-report-location-preview :location="$report->location" />
+                <span class="flex shrink-0 items-center"><x-status-badge :status="$report->status" /></span>
+            </article>
         @empty
-            <div class="p-8 text-center sm:p-12"><h3 class="text-base font-semibold text-slate-900">No reports yet</h3><p class="mt-2 text-sm leading-6 text-slate-600">A clear location and a few details help the right service team respond.</p><a href="{{ route('citizen.reports.create') }}" class="mt-5 inline-flex rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-forest-800">Create your first report</a></div>
+            <x-empty-state title="No reports yet" description="Start a report when you see a civic service issue that needs attention." :href="route('citizen.reports.create')" action="Create your first report" />
         @endforelse
     </section>
 

@@ -42,6 +42,34 @@
     input {
         @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700;
     }
+
+    input:not([type='hidden']),
+    select,
+    textarea {
+        @apply transition-colors duration-150 focus-visible:border-forest-700 focus-visible:ring-4 focus-visible:ring-forest-100;
+    }
+
+    [aria-invalid='true'] {
+        @apply border-coral-600 focus-visible:border-coral-600 focus-visible:ring-red-100;
+    }
+}
+
+@layer components {
+    .button-primary {
+        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-forest-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700 disabled:cursor-not-allowed disabled:opacity-50;
+    }
+
+    .button-secondary {
+        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-line bg-white px-4 py-2.5 text-sm font-semibold text-forest-900 transition-colors hover:bg-forest-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700 disabled:cursor-not-allowed disabled:opacity-50;
+    }
+
+    .button-danger {
+        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-red-800 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-800 disabled:cursor-not-allowed disabled:opacity-50;
+    }
+
+    .status-badge {
+        @apply inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-semibold leading-5;
+    }
 }
 
 .report-map {
@@ -52,4 +80,23 @@
 
 .report-map .leaflet-control-attribution {
     font-size: 10px;
+}
+
+.location-preview-map .leaflet-control-attribution {
+    font-size: 8px;
+}
+
+.location-preview-map .leaflet-control-attribution a {
+    @apply text-forest-800;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }

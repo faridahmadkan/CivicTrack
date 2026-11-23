@@ -98,7 +98,7 @@ class ReportSubmissionController extends Controller
             'slaInstance',
             'serviceFeedback', 'reopenRequests.reviewer',
             'statusEvents' => static fn ($query) => $query->where('citizen_visible', true),
-            'comments' => static fn ($query) => $query->where('visibility', 'public'),
+            'comments' => static fn ($query) => $query->where('visibility', ReportCommentVisibility::Public->value),
         ]);
         $report->loadCount('workOrders');
 
