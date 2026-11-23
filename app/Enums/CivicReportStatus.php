@@ -14,6 +14,8 @@ enum CivicReportStatus: string
     case Reopened = 'reopened';
     case Rejected = 'rejected';
     case Duplicate = 'duplicate';
+    case Cancelled = 'cancelled';
+    case Disputed = 'disputed';
 
     public function label(): string
     {
@@ -28,11 +30,13 @@ enum CivicReportStatus: string
             self::Reopened => 'Reopened',
             self::Rejected => 'Closed without action',
             self::Duplicate => 'Marked as duplicate',
+            self::Cancelled => 'Cancelled by reporter',
+            self::Disputed => 'Resolution under dispute',
         };
     }
 
     public function isTerminal(): bool
     {
-        return in_array($this, [self::Closed, self::Rejected, self::Duplicate], true);
+        return in_array($this, [self::Closed, self::Rejected, self::Duplicate, self::Cancelled], true);
     }
 }

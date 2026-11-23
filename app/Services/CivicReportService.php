@@ -12,12 +12,14 @@ use App\Events\CivicReportStatusChanged;
 use App\Models\CivicReport;
 use App\Models\ReportComment;
 use App\Models\ReportLocation;
+use App\Models\ReportRelationship;
 use App\Models\ReportStatusEvent;
 use App\Models\ServiceCategory;
 use App\Models\UnitMembership;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -144,7 +146,6 @@ class CivicReportService
                 CivicReportStatus::Acknowledged,
                 CivicReportStatus::NeedsInformation,
                 CivicReportStatus::Rejected,
-                CivicReportStatus::Duplicate,
             ], true)) {
                 throw ValidationException::withMessages(['status' => 'Choose a valid triage decision.']);
             }
@@ -152,77 +153,148 @@ class CivicReportService
             if (in_array($newStatus, [
                 CivicReportStatus::NeedsInformation,
                 CivicReportStatus::Rejected,
-                CivicReportStatus::Duplicate,
             ], true) && trim((string) $reason) === '') {
                 throw ValidationException::withMessages(['reason' => 'A reason is required for this decision.']);
             }
 
-            $location = $report->location;
-
-            if ($isPublic && ($location?->latitude === null || $location?->longitude === null)) {
-                throw ValidationException::withMessages([
-                    'is_public' => 'A report needs a selected map location before it can appear on the public map.',
-                ]);
-            }
-
-            $previousStatus = $report->status;
-            $previousPriority = $report->priority;
-            $timestamps = [];
-
-            if ($newStatus === CivicReportStatus::Acknowledged && $report->acknowledged_at === null) {
-                $timestamps['acknowledged_at'] = now();
-            }
-
-            if (in_array($newStatus, [CivicReportStatus::Rejected, CivicReportStatus::Duplicate], true)) {
-                $timestamps['closed_at'] = now();
-            }
-
-            $report->forceFill(array_merge([
-                'status' => $newStatus,
-                'priority' => $newPriority,
-                'reviewed_by' => $actor->id,
-                'is_public' => $isPublic,
-            ], $timestamps))->save();
-
-            $this->reportSlaService->recordFirstResponse($report, $actor);
-
-            if (in_array($newStatus, [CivicReportStatus::Rejected, CivicReportStatus::Duplicate], true)) {
-                $this->reportSlaService->recordResolved($report, $actor, $newStatus->value);
-            }
-
-            if ($location !== null && $isPublic) {
-                $location->forceFill([
-                    'public_latitude' => round((float) $location->latitude, 2),
-                    'public_longitude' => round((float) $location->longitude, 2),
-                    'privacy_level' => 'generalized_public',
-                ])->save();
-            } elseif ($location !== null) {
-                $location->forceFill([
-                    'public_latitude' => null,
-                    'public_longitude' => null,
-                    'privacy_level' => 'precise_private',
-                ])->save();
-            }
-
-            if (! $isPublic) {
-                $report->forceFill(['is_public' => false])->save();
-            }
-
-            $this->recordStatusEvent($report, $actor, 'triage_decision', $previousStatus, $newStatus, $reason, $previousPriority, $newPriority);
-            $this->auditWriter->record(
-                'civic_report.triaged',
-                $report,
-                ['status' => $newStatus->value, 'priority' => $newPriority->value, 'is_public' => $isPublic],
-                $actor,
-            );
-
-            return $report;
+            return $this->applyTriageDecision($report, $actor, $newStatus, $newPriority, $reason, $isPublic);
         });
 
         $report = $report->fresh(['category', 'location']);
         CivicReportStatusChanged::dispatch($report);
 
         return $report;
+    }
+
+    public function cancelByReporter(CivicReport $report, ?User $reporter, string $reason): CivicReport
+    {
+        $cancelledReport = DB::transaction(function () use ($report, $reporter, $reason): CivicReport {
+            $report = CivicReport::query()->lockForUpdate()->findOrFail($report->id);
+
+            if ($reporter !== null && ! $report->isOwnedBy($reporter)) {
+                throw ValidationException::withMessages(['report' => 'Only the report owner can cancel this report.']);
+            }
+
+            if (! in_array($report->status, [
+                CivicReportStatus::Submitted,
+                CivicReportStatus::UnderReview,
+                CivicReportStatus::NeedsInformation,
+                CivicReportStatus::Acknowledged,
+            ], true) || $report->workOrders()->exists()) {
+                throw ValidationException::withMessages(['reason' => 'This report can no longer be cancelled by its reporter.']);
+            }
+
+            $previousStatus = $report->status;
+            $previousPriority = $report->priority;
+            $report->forceFill([
+                'status' => CivicReportStatus::Cancelled,
+                'is_public' => false,
+                'closed_at' => now(),
+            ])->save();
+
+            $this->reportSlaService->recordFirstResponse($report, $reporter);
+            $this->reportSlaService->recordResolved($report, $reporter, CivicReportStatus::Cancelled->value);
+
+            $report->location?->forceFill([
+                'public_latitude' => null,
+                'public_longitude' => null,
+                'privacy_level' => 'precise_private',
+            ])->save();
+
+            $this->recordStatusEvent(
+                $report,
+                $reporter,
+                'report_cancelled',
+                $previousStatus,
+                CivicReportStatus::Cancelled,
+                trim($reason),
+                $previousPriority,
+                $previousPriority,
+            );
+            $this->auditWriter->record('civic_report.cancelled', $report, ['reason' => trim($reason)], $reporter);
+
+            return $report;
+        });
+
+        $cancelledReport = $cancelledReport->fresh(['category', 'location']);
+        CivicReportStatusChanged::dispatch($cancelledReport);
+
+        return $cancelledReport;
+    }
+
+    public function resolveAsDuplicate(
+        CivicReport $report,
+        CivicReport $canonicalReport,
+        User $actor,
+        string $reason,
+        bool $merge,
+    ): CivicReport {
+        if ($report->is($canonicalReport)) {
+            throw ValidationException::withMessages(['duplicate_report' => 'A report cannot be linked to itself.']);
+        }
+
+        $updatedReport = DB::transaction(function () use ($report, $canonicalReport, $actor, $reason, $merge): CivicReport {
+            $lockedReports = CivicReport::query()
+                ->whereKey([$report->id, $canonicalReport->id])
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+            $report = $lockedReports->get($report->id);
+            $canonicalReport = $lockedReports->get($canonicalReport->id);
+
+            if ($report === null || $canonicalReport === null) {
+                throw ValidationException::withMessages(['duplicate_report' => 'Choose an existing report.']);
+            }
+
+            Gate::forUser($actor)->authorize('triage', $report);
+            Gate::forUser($actor)->authorize('triage', $canonicalReport);
+
+            if (! in_array($report->status, [
+                CivicReportStatus::Submitted,
+                CivicReportStatus::UnderReview,
+                CivicReportStatus::Reopened,
+            ], true)) {
+                throw ValidationException::withMessages(['duplicate_report' => 'Only a report awaiting triage can be marked as a duplicate.']);
+            }
+
+            if (in_array($canonicalReport->status, [CivicReportStatus::Duplicate, CivicReportStatus::Rejected], true)) {
+                throw ValidationException::withMessages(['duplicate_report' => 'Choose an active or resolved report as the canonical report.']);
+            }
+
+            if (ReportRelationship::query()
+                ->where('report_id', $report->id)
+                ->whereIn('relationship_type', ['duplicate', 'merged_into'])
+                ->exists()) {
+                throw ValidationException::withMessages(['duplicate_report' => 'This report already points to a canonical report.']);
+            }
+
+            ReportRelationship::query()->create([
+                'report_id' => $report->id,
+                'related_report_id' => $canonicalReport->id,
+                'relationship_type' => $merge ? 'merged_into' : 'duplicate',
+                'reason' => trim($reason),
+                'created_by' => $actor->id,
+                'properties' => ['canonical_reference' => $canonicalReport->public_reference],
+            ]);
+
+            return $this->applyTriageDecision(
+                $report,
+                $actor,
+                CivicReportStatus::Duplicate,
+                $report->priority,
+                trim($reason),
+                false,
+                $merge ? 'duplicate_merged' : 'duplicate_marked',
+                $merge ? 'civic_report.duplicate_merged' : 'civic_report.duplicate_marked',
+                ['related_report_id' => $canonicalReport->id, 'merged' => $merge],
+            );
+        });
+
+        $updatedReport = $updatedReport->fresh(['category', 'location']);
+        CivicReportStatusChanged::dispatch($updatedReport);
+
+        return $updatedReport;
     }
 
     public function addComment(
@@ -335,6 +407,77 @@ class CivicReportService
                 ->exists()) {
             throw ValidationException::withMessages(['report' => 'You do not have access to triage this service report.']);
         }
+    }
+
+    /**
+     * @param  array<string, bool|float|int|string|null>  $auditProperties
+     */
+    private function applyTriageDecision(
+        CivicReport $report,
+        User $actor,
+        CivicReportStatus $newStatus,
+        CivicReportPriority $newPriority,
+        ?string $reason,
+        bool $isPublic,
+        string $eventType = 'triage_decision',
+        string $auditEvent = 'civic_report.triaged',
+        array $auditProperties = [],
+    ): CivicReport {
+        $location = $report->location;
+
+        if ($isPublic && ($location?->latitude === null || $location?->longitude === null)) {
+            throw ValidationException::withMessages([
+                'is_public' => 'A report needs a selected map location before it can appear on the public map.',
+            ]);
+        }
+
+        $previousStatus = $report->status;
+        $previousPriority = $report->priority;
+        $timestamps = [];
+
+        if ($newStatus === CivicReportStatus::Acknowledged && $report->acknowledged_at === null) {
+            $timestamps['acknowledged_at'] = now();
+        }
+
+        if (in_array($newStatus, [CivicReportStatus::Rejected, CivicReportStatus::Duplicate, CivicReportStatus::Cancelled], true)) {
+            $timestamps['closed_at'] = now();
+        }
+
+        $report->forceFill(array_merge([
+            'status' => $newStatus,
+            'priority' => $newPriority,
+            'reviewed_by' => $actor->id,
+            'is_public' => $isPublic,
+        ], $timestamps))->save();
+
+        $this->reportSlaService->recordFirstResponse($report, $actor);
+
+        if (in_array($newStatus, [CivicReportStatus::Rejected, CivicReportStatus::Duplicate], true)) {
+            $this->reportSlaService->recordResolved($report, $actor, $newStatus->value);
+        }
+
+        if ($location !== null && $isPublic) {
+            $location->forceFill([
+                'public_latitude' => round((float) $location->latitude, 2),
+                'public_longitude' => round((float) $location->longitude, 2),
+                'privacy_level' => 'generalized_public',
+            ])->save();
+        } elseif ($location !== null) {
+            $location->forceFill([
+                'public_latitude' => null,
+                'public_longitude' => null,
+                'privacy_level' => 'precise_private',
+            ])->save();
+        }
+
+        $this->recordStatusEvent($report, $actor, $eventType, $previousStatus, $newStatus, $reason, $previousPriority, $newPriority);
+        $this->auditWriter->record($auditEvent, $report, array_merge([
+            'status' => $newStatus->value,
+            'priority' => $newPriority->value,
+            'is_public' => $isPublic,
+        ], $auditProperties), $actor);
+
+        return $report;
     }
 
     private function recordStatusEvent(

@@ -4,9 +4,9 @@ namespace App\Http\Requests;
 
 use App\Enums\CivicReportPriority;
 use App\Enums\CivicReportStatus;
-use Illuminate\Validation\Rule;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class TriageCivicReportRequest extends FormRequest
 {

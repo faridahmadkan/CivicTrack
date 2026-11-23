@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -25,9 +26,15 @@ return new class extends Migration
             $table->index(['related_report_id', 'relationship_type']);
         });
 
-        if (Schema::getConnection()->getDriverName() === 'sqlite') {
-            IlluminateSupportFacadesDB::statement("CREATE TRIGGER report_relationships_no_self_insert BEFORE INSERT ON report_relationships WHEN NEW.report_id = NEW.related_report_id BEGIN SELECT RAISE(ABORT, 'A report cannot be related to itself'); END");
-            IlluminateSupportFacadesDB::statement("CREATE TRIGGER report_relationships_no_self_update BEFORE UPDATE ON report_relationships WHEN NEW.report_id = NEW.related_report_id BEGIN SELECT RAISE(ABORT, 'A report cannot be related to itself'); END");
+        $driver = Schema::getConnection()->getDriverName();
+
+        if (in_array($driver, ['sqlite', 'pgsql'], true)) {
+            DB::statement("CREATE UNIQUE INDEX report_relationships_single_canonical_target ON report_relationships(report_id) WHERE relationship_type IN ('duplicate', 'merged_into')");
+        }
+
+        if ($driver === 'sqlite') {
+            DB::statement("CREATE TRIGGER report_relationships_validate_insert BEFORE INSERT ON report_relationships WHEN NEW.report_id = NEW.related_report_id OR NEW.relationship_type NOT IN ('related', 'duplicate', 'merged_into') OR (NEW.relationship_type = 'related' AND NEW.report_id > NEW.related_report_id) BEGIN SELECT RAISE(ABORT, 'Invalid report relationship'); END");
+            DB::statement("CREATE TRIGGER report_relationships_validate_update BEFORE UPDATE ON report_relationships WHEN NEW.report_id = NEW.related_report_id OR NEW.relationship_type NOT IN ('related', 'duplicate', 'merged_into') OR (NEW.relationship_type = 'related' AND NEW.report_id > NEW.related_report_id) BEGIN SELECT RAISE(ABORT, 'Invalid report relationship'); END");
         }
     }
 
@@ -36,9 +43,15 @@ return new class extends Migration
      */
     public function down(): void
     {
-        if (Schema::getConnection()->getDriverName() === 'sqlite') {
-            Illuminate\Support\Facades\DB::statement('DROP TRIGGER IF EXISTS report_relationships_no_self_insert');
-            Illuminate\Support\Facades\DB::statement('DROP TRIGGER IF EXISTS report_relationships_no_self_update');
+        $driver = Schema::getConnection()->getDriverName();
+
+        if (in_array($driver, ['sqlite', 'pgsql'], true)) {
+            DB::statement('DROP INDEX IF EXISTS report_relationships_single_canonical_target');
+        }
+
+        if ($driver === 'sqlite') {
+            DB::statement('DROP TRIGGER IF EXISTS report_relationships_validate_insert');
+            DB::statement('DROP TRIGGER IF EXISTS report_relationships_validate_update');
         }
 
         Schema::dropIfExists('report_relationships');

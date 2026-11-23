@@ -100,6 +100,7 @@ class ReportSubmissionController extends Controller
             'statusEvents' => static fn ($query) => $query->where('citizen_visible', true),
             'comments' => static fn ($query) => $query->where('visibility', 'public'),
         ]);
+        $report->loadCount('workOrders');
 
         return view('public.reports.track', ['report' => $report]);
     }

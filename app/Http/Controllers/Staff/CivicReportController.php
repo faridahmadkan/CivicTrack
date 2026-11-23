@@ -6,11 +6,16 @@ use App\Enums\CivicReportPriority;
 use App\Enums\CivicReportStatus;
 use App\Enums\ReportCommentVisibility;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\LinkRelatedReportRequest;
+use App\Http\Requests\ResolveDuplicateReportRequest;
+use App\Http\Requests\ReviewReportDisputeRequest;
 use App\Http\Requests\StoreReportCommentRequest;
 use App\Http\Requests\TriageCivicReportRequest;
 use App\Models\CivicReport;
 use App\Models\UnitMembership;
 use App\Services\CivicReportService;
+use App\Services\ReportDisputeService;
+use App\Services\ReportDuplicateService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -86,10 +91,15 @@ class CivicReportController extends Controller
             'comments.actor', 'routingDecisions.organizationUnit', 'workOrders', 'slaInstance.events.actor',
             'reopenRequests.requester', 'reopenRequests.reviewer', 'serviceFeedback',
         ]);
+        $duplicateService = app(ReportDuplicateService::class);
 
         return view('staff.reports.show', [
             'report' => $civicReport,
             'isAdministrator' => $request->user()->can('platform.access'),
+            'reportRelationships' => $duplicateService->visibleRelationshipsFor($civicReport, $request->user()),
+            'duplicateSuggestions' => $request->user()->can('triage', $civicReport)
+                ? $duplicateService->suggestionsFor($civicReport, $request->user())
+                : collect(),
         ]);
     }
 
@@ -119,5 +129,53 @@ class CivicReportController extends Controller
         $service->addComment($civicReport, $request->user(), $request->validated('body'), ReportCommentVisibility::Internal);
 
         return to_route('staff.reports.show', $civicReport)->with('status', 'Internal note added.');
+    }
+
+    public function linkRelated(
+        LinkRelatedReportRequest $request,
+        CivicReport $civicReport,
+        CivicReport $relatedReport,
+        ReportDuplicateService $service,
+    ): RedirectResponse {
+        $service->linkRelated($civicReport, $relatedReport, $request->user(), $request->validated('reason'));
+
+        return to_route('staff.reports.show', $civicReport)->with('status', 'Related reports linked.');
+    }
+
+    public function markDuplicate(
+        ResolveDuplicateReportRequest $request,
+        CivicReport $civicReport,
+        CivicReport $duplicateReport,
+        ReportDuplicateService $service,
+    ): RedirectResponse {
+        $service->markDuplicate($civicReport, $duplicateReport, $request->user(), $request->validated('reason'));
+
+        return to_route('staff.reports.show', $civicReport)->with('status', 'Report marked as a duplicate.');
+    }
+
+    public function mergeDuplicate(
+        ResolveDuplicateReportRequest $request,
+        CivicReport $civicReport,
+        CivicReport $duplicateReport,
+        ReportDuplicateService $service,
+    ): RedirectResponse {
+        $service->mergeInto($civicReport, $duplicateReport, $request->user(), $request->validated('reason'));
+
+        return to_route('staff.reports.show', $civicReport)->with('status', 'Report merged into the selected report.');
+    }
+
+    public function reviewDispute(
+        ReviewReportDisputeRequest $request,
+        CivicReport $civicReport,
+        ReportDisputeService $service,
+    ): RedirectResponse {
+        $service->review(
+            $civicReport,
+            $request->user(),
+            $request->validated('decision'),
+            $request->validated('reason'),
+        );
+
+        return to_route('staff.reports.show', $civicReport)->with('status', 'Report dispute review recorded.');
     }
 }

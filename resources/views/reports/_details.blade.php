@@ -4,6 +4,7 @@
     $attachmentRoute = $guestAccess ? 'public.reports.track.attachments.download' : 'citizen.reports.attachments.download';
     $pendingReopenRequest = $report->reopenRequests->firstWhere('status', App\Enums\ReportReopenStatus::Pending);
     $reopenDeadline = $report->resolved_at?->copy()->addDays((int) config('civictrack.feedback.reopen_window_days', 30));
+    $disputeDeadline = ($report->resolved_at ?? $report->closed_at)?->copy()->addDays((int) config('civictrack.feedback.reopen_window_days', 30));
 @endphp
 
 <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]">
@@ -172,6 +173,32 @@
                         <textarea name="reason" rows="3" maxlength="2000" required class="mt-1.5 w-full rounded-xl border border-line px-3 py-2.5 text-sm font-normal">{{ old('reason') }}</textarea>
                     </label>
                     <button class="mt-3 rounded-lg border border-line bg-white px-4 py-2.5 text-sm font-semibold text-forest-900 hover:bg-forest-50">Request review</button>
+                </form>
+            </section>
+        @endif
+        @if (in_array($report->status, [App\Enums\CivicReportStatus::Submitted, App\Enums\CivicReportStatus::UnderReview, App\Enums\CivicReportStatus::NeedsInformation, App\Enums\CivicReportStatus::Acknowledged], true) && $report->work_orders_count === 0)
+            <section class="rounded-2xl border border-line bg-white p-5 shadow-sm" aria-labelledby="cancel-report-heading">
+                <h2 id="cancel-report-heading" class="text-sm font-semibold text-forest-950">Withdraw this report</h2>
+                <p class="mt-2 text-xs leading-5 text-slate-500">You can cancel before field work is planned. The report and its history will remain on record.</p>
+                <form method="POST" action="{{ route('public.reports.cancel', $report) }}" class="mt-3" onsubmit="return confirm('Cancel this report? Its history will be retained.')">
+                    @csrf
+                    <label class="block text-xs font-semibold text-slate-700">Reason for cancellation
+                        <textarea name="reason" rows="3" minlength="3" maxlength="1000" required class="mt-1.5 w-full rounded-xl border border-line px-3 py-2.5 text-sm font-normal">{{ old('reason') }}</textarea>
+                    </label>
+                    <button class="mt-3 rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-forest-900 hover:bg-forest-50">Cancel report</button>
+                </form>
+            </section>
+        @endif
+        @if (in_array($report->status, [App\Enums\CivicReportStatus::Resolved, App\Enums\CivicReportStatus::Closed, App\Enums\CivicReportStatus::Rejected, App\Enums\CivicReportStatus::Duplicate, App\Enums\CivicReportStatus::Cancelled], true) && $disputeDeadline && now()->lessThanOrEqualTo($disputeDeadline))
+            <section class="rounded-2xl border border-amber-200 bg-amber-50 p-5" aria-labelledby="dispute-report-heading">
+                <h2 id="dispute-report-heading" class="text-sm font-semibold text-amber-950">Disagree with this outcome?</h2>
+                <p class="mt-2 text-xs leading-5 text-amber-900">Ask the service team to review the closed outcome by {{ $disputeDeadline->format('M j, Y') }}.</p>
+                <form method="POST" action="{{ route('public.reports.disputes.store', $report) }}" class="mt-3" onsubmit="return confirm('Send this outcome for staff review?')">
+                    @csrf
+                    <label class="block text-xs font-semibold text-amber-950">Why should the outcome be reviewed?
+                        <textarea name="reason" rows="3" minlength="3" maxlength="2000" required class="mt-1.5 w-full rounded-xl border border-amber-200 bg-white px-3 py-2.5 text-sm font-normal">{{ old('reason') }}</textarea>
+                    </label>
+                    <button class="mt-3 rounded-lg bg-amber-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-800">Request outcome review</button>
                 </form>
             </section>
         @endif

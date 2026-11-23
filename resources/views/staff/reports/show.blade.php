@@ -32,6 +32,66 @@
         </div>
 
         <aside class="space-y-5">
+            @if ($report->status === App\Enums\CivicReportStatus::Disputed)
+                @can('triage', $report)
+                    <section class="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+                        <h2 class="text-sm font-semibold text-amber-950">Review citizen dispute</h2>
+                        <p class="mt-1 text-xs leading-5 text-amber-900">The previous outcome was {{ $report->statusEvents->where('event_type', 'dispute_submitted')->last()?->from_status?->label() ?? 'closed' }}. Reopening starts a new service cycle.</p>
+                        <form method="POST" action="{{ route('staff.reports.disputes.review', $report) }}" class="mt-4 space-y-3">@csrf @method('PUT')
+                            <label class="block text-xs font-semibold text-amber-950">Decision<select name="decision" required class="mt-1.5 w-full rounded-lg border border-amber-200 bg-white px-3 py-2.5 text-sm font-normal text-slate-800"><option value="reopen">Reopen and resume service</option><option value="uphold">Uphold the previous outcome</option></select></label>
+                            <label class="block text-xs font-semibold text-amber-950">Review reason<textarea name="reason" rows="3" minlength="3" maxlength="1000" required class="mt-1.5 w-full rounded-lg border border-amber-200 bg-white px-3 py-2.5 text-sm font-normal"></textarea></label>
+                            <button class="w-full rounded-lg bg-amber-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-800">Record dispute review</button>
+                        </form>
+                    </section>
+                @endcan
+            @endif
+            <section class="rounded-2xl border border-line bg-white p-5 shadow-sm">
+                <h2 class="text-sm font-semibold text-forest-950">Related reports</h2>
+                <ul class="mt-3 space-y-3">
+                    @forelse ($reportRelationships as $item)
+                        <li class="rounded-xl bg-sand-50 p-3">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ $item['label'] }}</p>
+                            <a href="{{ route('staff.reports.show', $item['report']) }}" class="mt-1 block text-sm font-semibold text-forest-800 underline underline-offset-2">{{ $item['report']->public_reference }} · {{ $item['report']->title }}</a>
+                            <p class="mt-1 text-xs leading-5 text-slate-600">{{ $item['relationship']->reason }}</p>
+                            <p class="mt-1 text-[0.7rem] text-slate-500">Recorded by {{ $item['relationship']->creator?->name ?? 'Former staff member' }} · {{ $item['relationship']->created_at->format('M j, Y · g:i A') }}</p>
+                        </li>
+                    @empty
+                        <li class="text-sm text-slate-500">No report links have been reviewed.</li>
+                    @endforelse
+                </ul>
+
+                @can('triage', $report)
+                    <div class="mt-5 border-t border-line pt-4">
+                        <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500">Possible duplicates</h3>
+                        <p class="mt-1 text-xs leading-5 text-slate-500">Suggestions use category, title, and location. They do not change report status.</p>
+                        <ul class="mt-3 space-y-3">
+                            @forelse ($duplicateSuggestions as $suggestion)
+                                <li class="rounded-xl border border-line p-3">
+                                    <a href="{{ route('staff.reports.show', $suggestion['report']) }}" class="text-sm font-semibold text-forest-800 underline underline-offset-2">{{ $suggestion['report']->public_reference }} · {{ $suggestion['report']->title }}</a>
+                                    <p class="mt-1 text-xs text-slate-500">{{ $suggestion['match_reason'] }}</p>
+                                    <details class="mt-3">
+                                        <summary class="cursor-pointer text-xs font-semibold text-forest-800">Review link or duplicate</summary>
+                                        <form method="POST" action="{{ route('staff.reports.related.store', [$report, $suggestion['report']]) }}" class="mt-3 space-y-2">@csrf
+                                            <label class="block text-xs font-medium text-slate-600">Why are these reports related?<textarea name="reason" minlength="3" maxlength="1000" required rows="2" class="mt-1 w-full rounded-lg border border-line px-3 py-2 text-xs"></textarea></label>
+                                            <button class="rounded-lg border border-line px-3 py-2 text-xs font-semibold text-forest-900 hover:bg-forest-50">Link as related</button>
+                                        </form>
+                                        <form method="POST" action="{{ route('staff.reports.duplicates.store', [$report, $suggestion['report']]) }}" class="mt-3 space-y-2">@csrf
+                                            <label class="block text-xs font-medium text-slate-600">Why is this a duplicate?<textarea name="reason" minlength="3" maxlength="1000" required rows="2" class="mt-1 w-full rounded-lg border border-line px-3 py-2 text-xs"></textarea></label>
+                                            <button class="rounded-lg bg-forest-900 px-3 py-2 text-xs font-semibold text-white hover:bg-forest-800">Mark this report duplicate</button>
+                                        </form>
+                                        <form method="POST" action="{{ route('staff.reports.duplicates.merge', [$report, $suggestion['report']]) }}" class="mt-3 space-y-2" onsubmit="return confirm('Keep both reports and their histories, and mark this report as merged into the selected report?')">@csrf
+                                            <label class="block text-xs font-medium text-slate-600">Why should this report be merged?<textarea name="reason" minlength="3" maxlength="1000" required rows="2" class="mt-1 w-full rounded-lg border border-line px-3 py-2 text-xs"></textarea></label>
+                                            <button class="rounded-lg border border-amber-300 px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-50">Merge into selected report</button>
+                                        </form>
+                                    </details>
+                                </li>
+                            @empty
+                                <li class="text-sm text-slate-500">No similar reports were found in this service category.</li>
+                            @endforelse
+                        </ul>
+                    </div>
+                @endcan
+            </section>
             @can('triage', $report)
                 <section class="rounded-2xl border border-line bg-white p-5 shadow-sm">
                     <h2 class="text-sm font-semibold text-forest-950">Record triage decision</h2>

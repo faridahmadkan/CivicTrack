@@ -5,14 +5,16 @@ CivicTrack is a Laravel 13 service-reporting and field-operations application. I
 ## Implemented workflows
 
 - Guests submit reports and receive a one-time access code for protected tracking. Registered citizens can submit and follow their own reports.
+- Reporters can cancel eligible reports before field work begins and dispute a closed outcome within the review window. Staff can uphold or reopen a disputed outcome; reopening starts a new SLA cycle.
 - Staff review and route reports within their organization-unit scope. Administrators can configure units, categories, registration controls, and report SLA policies.
 - Staff and field workers use separate workspaces and permissions. Applicants receive no operational role until approved; administrators can also provision active staff and worker accounts directly.
 - A work order can contain multiple tasks and dependencies. A task can have a team of workers, retains assignment history, and waits for every active team member to submit before staff can verify the task.
 - Report attachments, workforce documents, and task evidence are stored privately and served through authenticated, record-scoped download routes. Reporter-facing report pages only expose reporter-visible attachments.
 - Reports retain status history, public or internal comments, routing decisions, elapsed-minute SLA records, escalations, reopening requests, citizen feedback, audit events, and account notifications.
+- Staff receive advisory duplicate suggestions and can link reports, mark a report as a duplicate, or merge it into a canonical report through audited, department-scoped actions. Both reports and their original histories remain stored.
 - The public community map shows only staff-published reports with generalized coordinates.
 
-The application does not yet implement work-calendar SLA calculations, holidays or paused SLA timers, a read-tracked message center, controlled duplicate linking and merge, worker skills/certifications, configurable service-area boundaries, dynamic category fields, inventory, or statistical worker performance scoring. See [docs/architecture.md](docs/architecture.md) for the audit record, data model, security boundaries, and release limitations.
+The application does not yet implement work-calendar SLA calculations, holidays or paused SLA timers, a read-tracked message center, worker skills/certifications, configurable service-area boundaries, dynamic category fields, inventory, or statistical worker performance scoring. A report merge preserves separate report rows and histories; it does not combine comments or attachments. See [docs/architecture.md](docs/architecture.md) for the audit record, data model, security boundaries, and release limitations.
 
 ## Requirements
 

@@ -66,6 +66,7 @@ class CivicReportSubmissionTest extends TestCase
 
         $this->get(route('public.reports.submitted', $report))
             ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
             ->assertSee($report->public_reference)
             ->assertSee($token);
 
@@ -77,6 +78,7 @@ class CivicReportSubmissionTest extends TestCase
 
         $this->get(route('public.reports.track.show', $report))
             ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
             ->assertSee($report->public_reference)
             ->assertSee('Damaged crossing sign on Oak Street');
     }

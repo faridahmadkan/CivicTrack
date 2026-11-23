@@ -63,6 +63,7 @@ class CivicReportController extends Controller
             'serviceFeedback',
             'reopenRequests.reviewer',
         ]);
+        $report->loadCount('workOrders');
 
         return view('citizen.reports.show', ['report' => $report]);
     }

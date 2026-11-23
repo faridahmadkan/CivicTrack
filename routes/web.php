@@ -35,19 +35,26 @@ Route::post('/places/search', PlaceSearchController::class)->middleware('throttl
 
 Route::get('/reports/create', [ReportSubmissionController::class, 'create'])->name('public.reports.create');
 Route::post('/reports', [ReportSubmissionController::class, 'store'])->middleware('throttle:6,1')->name('public.reports.store');
-Route::get('/reports/{report}/submitted', [ReportSubmissionController::class, 'submitted'])->name('public.reports.submitted');
-Route::get('/reports/{report}/access', [ReportSubmissionController::class, 'access'])->name('public.reports.access');
+Route::get('/reports/{report}/submitted', [ReportSubmissionController::class, 'submitted'])
+    ->middleware('cache.headers:no_store;private')->name('public.reports.submitted');
+Route::get('/reports/{report}/access', [ReportSubmissionController::class, 'access'])
+    ->middleware('cache.headers:no_store;private')->name('public.reports.access');
 Route::post('/reports/{report}/access', [ReportSubmissionController::class, 'verifyAccess'])
-    ->middleware('throttle:8,1')->name('public.reports.verify-access');
-Route::get('/reports/{report}/track', [ReportSubmissionController::class, 'show'])->name('public.reports.track.show');
+    ->middleware(['throttle:8,1', 'cache.headers:no_store;private'])->name('public.reports.verify-access');
+Route::get('/reports/{report}/track', [ReportSubmissionController::class, 'show'])
+    ->middleware('cache.headers:no_store;private')->name('public.reports.track.show');
 Route::post('/reports/{report}/comments', [ReportSubmissionController::class, 'comment'])
-    ->middleware('throttle:8,1')->name('public.reports.track.comments.store');
+    ->middleware(['throttle:8,1', 'cache.headers:no_store;private'])->name('public.reports.track.comments.store');
 Route::post('/reports/{report}/feedback', [ReportFeedbackController::class, 'store'])
-    ->middleware('throttle:4,1')->name('public.reports.feedback.store');
+    ->middleware(['throttle:4,1', 'cache.headers:no_store;private'])->name('public.reports.feedback.store');
 Route::post('/reports/{report}/reopen-requests', [ReportFeedbackController::class, 'requestReopen'])
-    ->middleware('throttle:4,1')->name('public.reports.reopen-requests.store');
+    ->middleware(['throttle:4,1', 'cache.headers:no_store;private'])->name('public.reports.reopen-requests.store');
+Route::post('/reports/{report}/cancel', [ReportFeedbackController::class, 'cancel'])
+    ->middleware(['throttle:4,1', 'cache.headers:no_store;private'])->name('public.reports.cancel');
+Route::post('/reports/{report}/disputes', [ReportFeedbackController::class, 'dispute'])
+    ->middleware(['throttle:4,1', 'cache.headers:no_store;private'])->name('public.reports.disputes.store');
 Route::get('/reports/{report}/attachments/{attachment}', [PrivateFileController::class, 'reportAttachment'])
-    ->name('public.reports.track.attachments.download');
+    ->middleware('cache.headers:no_store;private')->name('public.reports.track.attachments.download');
 
 Route::middleware(['auth', 'verified', 'account.active', 'cache.headers:no_store;private', 'can:reports.view.own'])
     ->get('/citizen', CitizenDashboardController::class)
@@ -94,6 +101,10 @@ Route::middleware(['auth', 'verified', 'account.active', 'cache.headers:no_store
     ->group(function (): void {
         Route::get('/', [StaffCivicReportController::class, 'index'])->name('index');
         Route::get('/{civicReport}', [StaffCivicReportController::class, 'show'])->name('show');
+        Route::post('/{civicReport}/related/{relatedReport}', [StaffCivicReportController::class, 'linkRelated'])->name('related.store');
+        Route::post('/{civicReport}/duplicates/{duplicateReport}', [StaffCivicReportController::class, 'markDuplicate'])->name('duplicates.store');
+        Route::post('/{civicReport}/duplicates/{duplicateReport}/merge', [StaffCivicReportController::class, 'mergeDuplicate'])->name('duplicates.merge');
+        Route::put('/{civicReport}/dispute-review', [StaffCivicReportController::class, 'reviewDispute'])->name('disputes.review');
         Route::put('/{civicReport}/triage', [StaffCivicReportController::class, 'triage'])->name('triage');
         Route::post('/{civicReport}/comments', [StaffCivicReportController::class, 'comment'])->name('comments.store');
         Route::get('/{civicReport}/attachments/{attachment}', [PrivateFileController::class, 'staffReportAttachment'])
