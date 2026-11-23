@@ -17,15 +17,44 @@ class CitizenRegistrationTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
+    public function test_email_verification_can_be_disabled_for_citizen_registration(): void
+    {
+        $this->seed();
+        config(['civictrack.require_email_verification' => false]);
+        Notification::fake();
+
+        $this->post(route('register'), [
+            'name' => 'Amina Rahimi',
+            'email' => 'amina@example.test',
+            'age' => 29,
+            'locality' => 'Karte Seh, Kabul',
+            'password' => 'A secure citizen password 2026!',
+            'password_confirmation' => 'A secure citizen password 2026!',
+            'privacy_acknowledged' => '1',
+        ])->assertRedirect(route('home'));
+
+        $user = User::query()->where('email', 'amina@example.test')->firstOrFail();
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertNotNull($user->email_verified_at);
+        $this->get(route('citizen.home'))->assertOk();
+        Notification::assertNothingSent();
+    }
+
     public function test_open_citizen_registration_creates_a_verified_lifecycle_and_sends_verification(): void
     {
         Notification::fake();
         $this->seed();
+        $emailVerificationRequired = (bool) config('civictrack.require_email_verification');
 
         $response = $this->post(route('register'), [
             'name' => 'Amina Rahimi',
             'email' => 'AMINA@example.test',
             'phone' => '+1 555 010 1234',
+            'age' => 29,
+            'locality' => 'Karte Seh, Kabul',
+            'home_latitude' => '34.5553000',
+            'home_longitude' => '69.2075000',
             'password' => 'A secure citizen password 2026!',
             'password_confirmation' => 'A secure citizen password 2026!',
             'privacy_acknowledged' => '1',
@@ -38,10 +67,19 @@ class CitizenRegistrationTest extends TestCase
         $this->assertAuthenticatedAs($user);
         $this->assertSame(AccountStatus::Active, $user->account_status);
         $this->assertTrue($user->hasRole(RoleName::Citizen->value));
-        $this->assertNull($user->email_verified_at);
+        $this->assertSame($emailVerificationRequired, $user->email_verified_at === null);
+        $this->assertSame(29, $user->citizenProfile->age);
+        $this->assertSame('Karte Seh, Kabul', $user->citizenProfile->locality);
+        $this->assertEquals(34.555, (float) $user->citizenProfile->home_latitude);
+        $this->assertEquals(69.208, (float) $user->citizenProfile->home_longitude);
+        $this->assertArrayNotHasKey('age', $user->citizenProfile->toArray());
         $this->assertDatabaseHas('citizen_profiles', [
             'user_id' => $user->id,
             'phone' => '+1 555 010 1234',
+            'age' => 29,
+            'locality' => 'Karte Seh, Kabul',
+            'home_latitude' => '34.555',
+            'home_longitude' => '69.208',
             'privacy_notice_version' => config('civictrack.privacy_notice_version'),
         ]);
         $this->assertDatabaseHas('audit_events', [
@@ -51,9 +89,13 @@ class CitizenRegistrationTest extends TestCase
             'subject_id' => $user->id,
         ]);
         $this->assertSame(1, AuditEvent::query()->count());
-        Notification::assertSentTo($user, VerifyEmail::class);
-
-        $this->get(route('home'))->assertRedirect(route('verification.notice'));
+        if ($emailVerificationRequired) {
+            Notification::assertSentTo($user, VerifyEmail::class);
+            $this->get(route('home'))->assertRedirect(route('verification.notice'));
+        } else {
+            Notification::assertNotSentTo($user, VerifyEmail::class);
+            $this->get(route('citizen.home'))->assertOk();
+        }
     }
 
     public function test_registration_is_rejected_when_the_database_control_is_closed(): void
@@ -66,6 +108,8 @@ class CitizenRegistrationTest extends TestCase
         $response = $this->from(route('register'))->post(route('register'), [
             'name' => 'Amina Rahimi',
             'email' => 'amina@example.test',
+            'age' => 29,
+            'locality' => 'Karte Seh, Kabul',
             'password' => 'A secure citizen password 2026!',
             'password_confirmation' => 'A secure citizen password 2026!',
             'privacy_acknowledged' => '1',
@@ -108,6 +152,8 @@ class CitizenRegistrationTest extends TestCase
         $this->post(route('register'), [
             'name' => 'Amina Rahimi',
             'email' => 'amina@example.test',
+            'age' => 29,
+            'locality' => 'Karte Seh, Kabul',
             'password' => $citizenPassword,
             'password_confirmation' => $citizenPassword,
             'privacy_acknowledged' => '1',

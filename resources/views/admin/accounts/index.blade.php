@@ -7,13 +7,22 @@
     <div>
         <p class="text-xs font-bold uppercase tracking-[0.18em] text-forest-700">Server-managed accounts</p>
         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-forest-950">Account provisioning</h1>
-        <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Create citizen, staff, or field-worker accounts even when public registration and workforce applications are closed. Staff and workers receive only the selected unit membership. New accounts must verify their email before opening an operational workspace.</p>
+        <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Create citizen, staff, or field-worker accounts even when public registration and workforce applications are closed. Staff and workers receive only the selected unit membership. @if (config('civictrack.require_email_verification')) New accounts must verify their email before opening an operational workspace.@else Email verification is disabled for this installation.@endif</p>
     </div>
+
+    <section class="mt-6 flex flex-col gap-4 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between" aria-labelledby="pending-approvals-heading">
+        <div>
+            <p class="text-xs font-bold uppercase tracking-[0.16em] text-amber-800">Workforce approval queue</p>
+            <h2 id="pending-approvals-heading" class="mt-1 text-base font-semibold text-amber-950">{{ number_format($pendingApplicationsCount) }} application{{ $pendingApplicationsCount === 1 ? '' : 's' }} waiting for review</h2>
+            <p class="mt-1 max-w-2xl text-sm leading-6 text-amber-900">Applicants appear here with Citizen access while review is pending. Approving an application grants its staff or field-worker role and requested unit.</p>
+        </div>
+        <a href="{{ route('admin.workforce-applications.index') }}" class="group inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-forest-900 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-forest-800 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">Review applications <svg viewBox="0 0 20 20" class="size-4 transition-transform duration-200 group-hover:translate-x-0.5" fill="none" aria-hidden="true"><path d="M4.5 10h11m0 0L11 5.5m4.5 4.5L11 14.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg></a>
+    </section>
 
     <div class="mt-7 grid gap-6 xl:grid-cols-[22rem_1fr]">
         <section class="h-fit rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6">
             <h2 class="text-base font-semibold text-slate-900">Create an account</h2>
-            <p class="mt-1 text-xs leading-5 text-slate-500">The user receives a password setup link and an email verification link. No password is set or shown by this form.</p>
+            <p class="mt-1 text-xs leading-5 text-slate-500">The user receives a password setup link. @if (config('civictrack.require_email_verification')) An email verification link is also sent.@else Email verification is disabled and the account is verified automatically.@endif No password is set or shown by this form.</p>
             <form method="POST" action="{{ route('admin.accounts.store') }}" class="mt-5 space-y-4">
                 @csrf
                 <div>
@@ -74,6 +83,15 @@
                                 <span>{{ str($membership->membership_type->value)->headline() }} Â· {{ $membership->organizationUnit->name }} Â· {{ str($membership->status->value)->headline() }}</span>
                             @endforeach
                         </div>
+                        @foreach ($account->workforceApplications as $application)
+                            <div class="mt-4 flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <p class="text-xs font-semibold text-amber-950">Pending {{ ucfirst($application->application_type->value) }} application</p>
+                                    <p class="mt-1 text-xs text-amber-900">{{ $application->application_number }} · {{ $application->status->label() }} · {{ $application->requestedUnit?->name ?? 'Unit unavailable' }}</p>
+                                </div>
+                                <a href="{{ route('admin.workforce-applications.show', $application) }}" class="group inline-flex w-fit items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-forest-900 shadow-sm ring-1 ring-amber-200 transition hover:bg-forest-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">Review application <svg viewBox="0 0 16 16" class="size-3.5 transition-transform group-hover:translate-x-0.5" fill="none" aria-hidden="true"><path d="M3 8h10m0 0L9 4m4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg></a>
+                            </div>
+                        @endforeach
                     </article>
                 @empty
                     <div class="px-6 py-12 text-center"><p class="text-sm font-semibold text-slate-800">No accounts found</p><p class="mt-1 text-sm text-slate-500">Created accounts will appear here.</p></div>

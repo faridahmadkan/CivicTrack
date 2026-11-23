@@ -325,18 +325,20 @@ document.querySelectorAll('[data-report-map]').forEach((element) => {
     const addressInput = document.getElementById(element.dataset.addressInput);
     const selectedLocation = document.getElementById(element.dataset.locationOutput);
     const locateButton = document.getElementById(element.dataset.locateButton);
+    const coordinatePrecision = Math.min(7, Math.max(0, Number(element.dataset.coordinatePrecision || 7)));
     const locationStatus = element.closest('section')?.querySelector('[data-location-status]');
     const center = JSON.parse(element.dataset.mapCenter || '[0, 0]');
     const hasLocation = latitudeInput.value !== '' && longitudeInput.value !== '';
     const initialCenter = hasLocation ? [Number(latitudeInput.value), Number(longitudeInput.value)] : center;
-    const map = L.map(element).setView(initialCenter, hasLocation ? 15 : 2);
+    const defaultZoom = Number(element.dataset.mapZoom || 11);
+    const map = L.map(element).setView(initialCenter, hasLocation ? 15 : defaultZoom);
     let marker = hasLocation ? L.marker(initialCenter).addTo(map) : null;
 
     initializeTileLayers(map, element);
 
     const updateLocation = (point, address = null) => {
-        const latitude = point.lat.toFixed(7);
-        const longitude = point.lng.toFixed(7);
+        const latitude = point.lat.toFixed(coordinatePrecision);
+        const longitude = point.lng.toFixed(coordinatePrecision);
 
         latitudeInput.value = latitude;
         longitudeInput.value = longitude;
@@ -354,7 +356,7 @@ document.querySelectorAll('[data-report-map]').forEach((element) => {
     };
 
     if (hasLocation) {
-        selectedLocation.textContent = `${Number(latitudeInput.value).toFixed(7)}, ${Number(longitudeInput.value).toFixed(7)}`;
+        selectedLocation.textContent = `${Number(latitudeInput.value).toFixed(coordinatePrecision)}, ${Number(longitudeInput.value).toFixed(coordinatePrecision)}`;
     }
 
     const placeSearch = initializePlaceSearch(map, element, (result) => {
@@ -391,7 +393,7 @@ document.querySelectorAll('[data-report-map]').forEach((element) => {
 document.querySelectorAll('[data-public-report-map]').forEach((element) => {
     const center = JSON.parse(element.dataset.mapCenter || '[0, 0]');
     const markerData = JSON.parse(document.getElementById(element.dataset.markerData)?.textContent || '[]');
-    const map = L.map(element).setView(center, 2);
+    const map = L.map(element).setView(center, 11);
 
     initializeTileLayers(map, element);
 

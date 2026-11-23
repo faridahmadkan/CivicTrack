@@ -4,7 +4,7 @@
 @section('eyebrow', 'Workforce approvals')
 
 @section('content')
-    <a href="{{ route('admin.home') }}" class="mb-6 inline-flex rounded-lg text-sm font-semibold text-forest-800 hover:text-forest-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">← Administration home</a>
+    <x-back-link href="{{ route('admin.home') }}" class="mb-6">Administration home</x-back-link>
     <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div><p class="text-xs font-bold uppercase tracking-[0.18em] text-forest-700">Identity and access management</p><h1 class="mt-2 text-3xl font-semibold tracking-tight text-forest-950">Workforce applications</h1><p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Review applicant information and supporting documents. Approval grants one role and an organization membership in a single transaction.</p></div>
         <div class="flex flex-wrap gap-2"><a href="{{ route('admin.workforce-applications.index') }}" class="rounded-lg border border-line bg-white px-3.5 py-2 text-xs font-semibold {{ $selectedType === null ? 'text-forest-900 ring-1 ring-forest-700/20' : 'text-slate-600' }}">All permitted</a>@foreach ($availableTypes as $type)<a href="{{ route('admin.workforce-applications.index', ['type' => $type->value]) }}" class="rounded-lg border border-line bg-white px-3.5 py-2 text-xs font-semibold {{ $selectedType === $type->value ? 'text-forest-900 ring-1 ring-forest-700/20' : 'text-slate-600' }}">{{ ucfirst($type->value) }}</a>@endforeach</div>

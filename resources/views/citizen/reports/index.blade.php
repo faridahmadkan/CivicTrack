@@ -3,7 +3,7 @@
 @section('title', 'My reports')
 
 @section('content')
-    <a href="{{ route('citizen.home') }}" class="mb-6 inline-flex rounded-lg text-sm font-semibold text-forest-800 hover:text-forest-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">← Citizen dashboard</a>
+    <x-back-link href="{{ route('citizen.home') }}" class="mb-6">Citizen dashboard</x-back-link>
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
             <p class="text-xs font-bold uppercase tracking-[0.18em] text-forest-700">Citizen workspace</p>

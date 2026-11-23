@@ -40,6 +40,7 @@
                 <div><p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">CivicTrack / Administration</p><p class="mt-1 text-sm font-semibold text-slate-800">@yield('eyebrow', 'Operations command center')</p></div>
                 <div class="flex items-center gap-3">
                     <span class="hidden text-sm font-medium text-slate-600 sm:inline">{{ auth()->user()->name }}</span>
+                    <x-public-home-link label="Home" class="px-2.5 sm:px-3" />
                     <form method="POST" action="{{ route('logout') }}">@csrf<button class="rounded-lg border border-line bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-sand-100" type="submit">Sign out</button></form>
                 </div>
             </header>

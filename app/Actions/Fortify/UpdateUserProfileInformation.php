@@ -32,14 +32,21 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
             ],
         ])->validateWithBag('updateProfileInformation');
 
-        if ($input['email'] !== $user->email &&
-            $user instanceof MustVerifyEmail) {
+        if ($input['email'] !== $user->email
+            && $user instanceof MustVerifyEmail
+            && config('civictrack.require_email_verification')) {
             $this->updateVerifiedUser($user, $input);
         } else {
-            $user->forceFill([
+            $attributes = [
                 'name' => $input['name'],
                 'email' => $input['email'],
-            ])->save();
+            ];
+
+            if (! config('civictrack.require_email_verification')) {
+                $attributes['email_verified_at'] = now();
+            }
+
+            $user->forceFill($attributes)->save();
         }
     }
 

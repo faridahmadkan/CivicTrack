@@ -6,6 +6,7 @@ use App\Enums\RoleName;
 use App\Enums\WorkforceApplicationType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProvideWorkforceInformationRequest;
+use App\Http\Requests\StoreWorkforceApplicantRequest;
 use App\Http\Requests\StoreWorkforceApplicationRequest;
 use App\Models\OrganizationUnit;
 use App\Models\WorkforceApplication;
@@ -14,6 +15,8 @@ use App\Services\WorkforceApplicationService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Throwable;
 
 class WorkforceApplicationController extends Controller
 {
@@ -33,20 +36,54 @@ class WorkforceApplicationController extends Controller
         ]);
     }
 
-    public function create(string $type, RegistrationControlService $registrationControls): View
+    public function create(Request $request, string $type, RegistrationControlService $registrationControls): View
     {
         $applicationType = WorkforceApplicationType::tryFrom($type);
         abort_unless($applicationType !== null, 404);
-        $this->authorize('create', WorkforceApplication::class);
+
+        if ($request->user() !== null) {
+            $this->authorize('create', WorkforceApplication::class);
+        }
 
         return view('workforce.applications.create', [
             'type' => $applicationType,
             'registrationOpen' => $registrationControls->isOpen($applicationType->registrationRole()),
+            'isGuestApplicant' => $request->user() === null,
+            'requireEmailVerification' => config('civictrack.require_email_verification'),
+            'mapCenter' => [config('civictrack.map.latitude'), config('civictrack.map.longitude')],
             'organizationUnits' => OrganizationUnit::query()
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get(),
         ]);
+    }
+
+    public function register(
+        StoreWorkforceApplicantRequest $request,
+        string $type,
+        WorkforceApplicationService $service,
+    ): RedirectResponse {
+        $applicationType = WorkforceApplicationType::tryFrom($type);
+        abort_unless($applicationType !== null, 404);
+
+        $attributes = $request->validated();
+        $documents = $attributes['documents'] ?? [];
+        unset($attributes['documents']);
+        $registration = $service->registerApplicant($applicationType, $attributes, $documents);
+        $user = $registration['user'];
+
+        Auth::login($user);
+        $request->session()->regenerate();
+
+        if (config('civictrack.require_email_verification')) {
+            try {
+                $user->sendEmailVerificationNotification();
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        }
+
+        return to_route('home')->with('status', 'Your workforce application is pending administrator review. You can sign in and follow its status from your citizen dashboard.');
     }
 
     public function store(

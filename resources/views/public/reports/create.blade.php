@@ -4,7 +4,7 @@
 
 @section('content')
     <section class="mx-auto max-w-4xl px-5 py-12 sm:px-8 sm:py-16">
-        <a href="{{ route('public.home') }}" class="text-sm font-semibold text-forest-800 hover:text-forest-950">← CivicTrack home</a>
+        <x-back-link href="{{ route('public.home') }}">CivicTrack home</x-back-link>
         <p class="mt-8 text-xs font-bold uppercase tracking-[0.18em] text-forest-700">Resident report</p>
         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-forest-950 sm:text-4xl">Tell us what needs attention.</h1>
         <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-600">Share the service issue and where it is happening. You can submit as a guest or sign in to keep your reports together.</p>

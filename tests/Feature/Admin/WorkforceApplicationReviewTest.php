@@ -29,6 +29,20 @@ class WorkforceApplicationReviewTest extends TestCase
             'requested_unit_id' => $organizationUnit->id,
         ]);
 
+        $this->actingAs($administrator)
+            ->get(route('admin.accounts.index'))
+            ->assertOk()
+            ->assertSee('1 application waiting for review')
+            ->assertSee('Applicants appear here with Citizen access while review is pending.')
+            ->assertSee('Pending Staff application')
+            ->assertSee($application->application_number)
+            ->assertSee(route('admin.workforce-applications.show', $application));
+
+        $this->actingAs($administrator)
+            ->get(route('admin.workforce-applications.show', $application))
+            ->assertOk()
+            ->assertSee('Approve application');
+
         $response = $this->actingAs($administrator)->put(route('admin.workforce-applications.review', $application), [
             'status' => WorkforceApplicationStatus::Approved->value,
         ]);
@@ -64,6 +78,12 @@ class WorkforceApplicationReviewTest extends TestCase
             ->assertOk()
             ->assertSee(route('admin.workforce-applications.index'))
             ->assertSee('aria-current="page"', false);
+
+        $this->actingAs($administrator)
+            ->get(route('admin.home'))
+            ->assertOk()
+            ->assertSee('Review staff and worker applications')
+            ->assertSee(route('admin.workforce-applications.index'));
     }
 
     public function test_admin_approval_creates_a_worker_role_without_staff_permissions(): void

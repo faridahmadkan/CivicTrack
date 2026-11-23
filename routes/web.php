@@ -56,6 +56,11 @@ Route::post('/reports/{report}/disputes', [ReportFeedbackController::class, 'dis
 Route::get('/reports/{report}/attachments/{attachment}', [PrivateFileController::class, 'reportAttachment'])
     ->middleware('cache.headers:no_store;private')->name('public.reports.track.attachments.download');
 
+Route::get('/workforce/applications/{type}/create', [WorkforceApplicationController::class, 'create'])
+    ->name('workforce.applications.create');
+Route::post('/workforce/applications/{type}/register', [WorkforceApplicationController::class, 'register'])
+    ->middleware('throttle:5,1')->name('workforce.applications.register');
+
 Route::middleware(['auth', 'verified', 'account.active', 'cache.headers:no_store;private', 'can:reports.view.own'])
     ->get('/citizen', CitizenDashboardController::class)
     ->name('citizen.home');
@@ -72,7 +77,6 @@ Route::middleware(['auth', 'verified', 'account.active', 'cache.headers:no_store
 
 Route::middleware(['auth', 'verified', 'account.active', 'cache.headers:no_store;private'])->prefix('workforce')->name('workforce.')->group(function (): void {
     Route::get('/applications', [WorkforceApplicationController::class, 'index'])->name('applications.index');
-    Route::get('/applications/{type}/create', [WorkforceApplicationController::class, 'create'])->name('applications.create');
     Route::post('/applications/{type}', [WorkforceApplicationController::class, 'store'])->name('applications.store');
     Route::get('/applications/{workforceApplication}', [WorkforceApplicationController::class, 'show'])
         ->name('applications.show');

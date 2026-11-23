@@ -37,9 +37,9 @@
 
         <main class="flex min-h-screen flex-col px-5 py-6 sm:px-10 lg:px-14 xl:px-20">
             <div class="flex items-center justify-between">
-                <a href="{{ route('public.home') }}" class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-forest-900 transition hover:bg-sand-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">← Back to CivicTrack</a>
+                <x-back-link href="{{ route('public.home') }}">Back to CivicTrack</x-back-link>
             </div>
-            <div class="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-12">
+            <div class="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center py-12">
                 @yield('content')
             </div>
             <div class="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 text-xs text-slate-500">

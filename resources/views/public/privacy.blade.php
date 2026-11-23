@@ -4,7 +4,7 @@
 
 @section('content')
     <section class="mx-auto max-w-4xl px-5 py-14 sm:px-8 sm:py-20 lg:px-10">
-        <a href="{{ route('public.home') }}" class="mb-6 inline-flex rounded-lg text-sm font-semibold text-forest-800 hover:text-forest-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">← CivicTrack home</a>
+        <x-back-link href="{{ route('public.home') }}" class="mb-6">CivicTrack home</x-back-link>
         <p class="text-xs font-bold uppercase tracking-[0.18em] text-forest-700">Privacy and account security</p>
         <h1 class="mt-4 text-4xl font-semibold tracking-tight text-forest-950">Privacy notice</h1>
         <p class="mt-4 text-sm text-slate-500">Account notice version {{ config('civictrack.privacy_notice_version') }}</p>
@@ -16,7 +16,7 @@
             </section>
             <section>
                 <h2 class="text-lg font-semibold text-slate-900">Account information</h2>
-                <p class="mt-2 text-sm leading-7 text-slate-600">When you register, CivicTrack stores your name, email address, password hash, account status, email verification time, and the time and version of the privacy notice you acknowledged. You may optionally provide a phone number. Passwords are stored as one-way hashes and are never written to the audit record.</p>
+                <p class="mt-2 text-sm leading-7 text-slate-600">When you register, CivicTrack stores your name, email address, password hash, account status, email verification time, age, and city, district, or neighborhood. You may optionally provide a phone number and a neighborhood map pin. The map pin is rounded to neighborhood-level precision and is never shown on the public map. Passwords are stored as one-way hashes and are never written to the audit record.</p>
             </section>
             <section>
                 <h2 class="text-lg font-semibold text-slate-900">Security and accountability</h2>

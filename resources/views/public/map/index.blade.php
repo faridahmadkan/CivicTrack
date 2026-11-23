@@ -4,7 +4,7 @@
 
 @section('content')
     <section class="mx-auto max-w-7xl px-5 py-10 sm:px-8 sm:py-14 lg:px-10">
-        <a href="{{ route('public.home') }}" class="mb-6 inline-flex rounded-lg text-sm font-semibold text-forest-800 hover:text-forest-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">← CivicTrack home</a>
+        <x-back-link href="{{ route('public.home') }}" class="mb-6">CivicTrack home</x-back-link>
         <div class="flex flex-wrap items-end justify-between gap-4">
             <div>
                 <p class="text-xs font-bold uppercase tracking-[0.18em] text-forest-700">Community transparency</p>

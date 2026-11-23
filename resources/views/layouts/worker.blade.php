@@ -24,7 +24,7 @@
         <div class="min-w-0">
             <header class="flex items-center justify-between gap-4 border-b border-line bg-white px-5 py-4 sm:px-8">
                 <div><p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">CivicTrack / Field workspace</p><p class="mt-1 text-sm font-semibold text-slate-800">{{ auth()->user()->name }}</p></div>
-                <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit" class="rounded-lg border border-line bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-sand-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">Sign out</button></form>
+                <div class="flex items-center gap-2"><x-public-home-link label="Home" class="px-2.5 sm:px-3" /><form method="POST" action="{{ route('logout') }}">@csrf<button type="submit" class="rounded-xl border border-line bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-sand-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">Sign out</button></form></div>
             </header>
             <main class="mx-auto max-w-6xl px-5 py-7 sm:px-8 sm:py-10"><x-form-messages />@yield('content')</main>
             <footer class="mt-10 border-t border-line bg-white"><div class="mx-auto flex max-w-6xl justify-between gap-4 px-5 py-5 text-xs text-slate-500 sm:px-8"><span>Approved field workforce</span><a href="{{ route('privacy.notice') }}" class="hover:text-forest-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">Privacy notice</a></div></footer>

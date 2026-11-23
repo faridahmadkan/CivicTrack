@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\RoleName;
+use App\Models\OrganizationUnit;
 use App\Models\RegistrationControl;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
@@ -52,16 +53,19 @@ class AuthFoundationTest extends TestCase
             ->assertSee('Applicants do not receive staff or worker access until an application is approved.');
     }
 
-    public function test_open_workforce_application_link_redirects_guests_to_sign_in(): void
+    public function test_guest_can_open_an_enabled_workforce_application_form(): void
     {
         $this->seed();
         RegistrationControl::query()->where('context', RoleName::Worker->value)->update(['enabled' => true]);
+        OrganizationUnit::factory()->create();
 
         $this->get(route('public.home'))
             ->assertSee(route('workforce.applications.create', 'worker'));
 
         $this->get(route('workforce.applications.create', 'worker'))
-            ->assertRedirect(route('login'))
-            ->assertSessionHas('url.intended', route('workforce.applications.create', 'worker'));
+            ->assertOk()
+            ->assertSee('Create an account and apply')
+            ->assertSee('Create account and submit application')
+            ->assertSee('This citizen account lets you sign in and follow the application review.');
     }
 }

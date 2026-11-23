@@ -4,7 +4,7 @@
 @section('eyebrow', 'Work order and task coordination')
 
 @section('content')
-    <a href="{{ route('staff.reports.show', $workOrder->report) }}" class="text-sm font-semibold text-forest-800 hover:text-forest-950">← Report {{ $workOrder->report->public_reference }}</a>
+    <x-back-link href="{{ route('staff.reports.show', $workOrder->report) }}">Report {{ $workOrder->report->public_reference }}</x-back-link>
     <div class="mt-5 flex flex-wrap items-start justify-between gap-4">
         <div><p class="font-mono text-xs font-semibold text-slate-500">{{ $workOrder->reference }} · {{ $workOrder->organizationUnit->name }}</p><h1 class="mt-2 text-3xl font-semibold tracking-tight text-forest-950">{{ $workOrder->title }}</h1><p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{{ $workOrder->instructions ?: 'No work order instructions were added.' }}</p></div>
         <span class="rounded-full bg-forest-50 px-3 py-1.5 text-xs font-semibold text-forest-900">{{ str($workOrder->status->value)->headline() }}</span>

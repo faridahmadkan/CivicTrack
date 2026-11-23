@@ -5,7 +5,7 @@
 
 @section('content')
     <div class="max-w-5xl">
-        <a href="{{ route('admin.workforce-applications.index', ['type' => $application->application_type->value]) }}" class="text-sm font-semibold text-forest-800 hover:text-forest-950">← Application queue</a>
+        <x-back-link href="{{ route('admin.workforce-applications.index', ['type' => $application->application_type->value]) }}">Application queue</x-back-link>
         <div class="mt-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div><p class="text-xs font-bold uppercase tracking-[0.18em] text-forest-700">{{ ucfirst($application->application_type->value) }} application · {{ $application->application_number }}</p><h1 class="mt-2 text-3xl font-semibold tracking-tight text-forest-950">{{ $application->position_title }}</h1><p class="mt-2 text-sm text-slate-600">Submitted {{ $application->submitted_at->format('M j, Y · H:i') }}</p></div>
             <span class="w-fit rounded-full bg-sand-100 px-3 py-1.5 text-xs font-semibold text-slate-700">{{ $application->status->label() }}</span>

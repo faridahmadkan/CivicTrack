@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\AccountStatus;
 use App\Enums\RoleName;
 use App\Enums\WorkforceApplicationStatus;
 use App\Enums\WorkforceApplicationType;
@@ -16,6 +17,7 @@ use App\Models\WorkforceApplication;
 use App\Models\WorkforceApplicationDocument;
 use App\Models\WorkforceApplicationEvent;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -43,67 +45,63 @@ class WorkforceApplicationService
             return DB::transaction(function () use ($applicant, $type, $attributes, $documents, &$storedPaths): WorkforceApplication {
                 $applicant = User::query()->lockForUpdate()->findOrFail($applicant->id);
 
-                if (! $applicant->isActive() || ! $applicant->hasRole(RoleName::Citizen->value)) {
-                    throw ValidationException::withMessages(['application' => 'An active citizen account is required to apply.']);
-                }
-
-                if ($applicant->hasAnyRole([RoleName::Staff->value, RoleName::Worker->value])) {
-                    throw ValidationException::withMessages(['application' => 'An account with an approved workforce role cannot submit another workforce application.']);
-                }
-
-                if (WorkforceApplication::query()
-                    ->where('user_id', $applicant->id)
-                    ->whereIn('status', [
-                        WorkforceApplicationStatus::Submitted->value,
-                        WorkforceApplicationStatus::UnderReview->value,
-                        WorkforceApplicationStatus::InformationRequested->value,
-                    ])
-                    ->exists()) {
-                    throw ValidationException::withMessages(['application' => 'You already have a workforce application awaiting a decision.']);
-                }
-
-                $this->registrationControls->lockOpenContext($type->registrationRole());
-
-                $organizationUnit = OrganizationUnit::query()
-                    ->whereKey($attributes['requested_unit_id'])
-                    ->where('is_active', true)
-                    ->lockForUpdate()
-                    ->first();
-
-                if ($organizationUnit === null) {
-                    throw ValidationException::withMessages(['requested_unit_id' => 'Choose an active organization unit.']);
-                }
-
-                $applicationPrefix = $type === WorkforceApplicationType::Staff ? 'ST' : 'WK';
-                $application = WorkforceApplication::query()->create([
-                    'user_id' => $applicant->id,
-                    'requested_unit_id' => $organizationUnit->id,
-                    'application_number' => 'CT-'.$applicationPrefix.'-'.Str::upper((string) Str::ulid()),
-                    'application_type' => $type,
-                    'status' => WorkforceApplicationStatus::Submitted,
-                    'position_title' => $attributes['position_title'],
-                    'experience_summary' => $attributes['experience_summary'] ?? null,
-                    'qualification_summary' => $attributes['qualification_summary'] ?? null,
-                    'submitted_at' => now(),
-                ]);
-
-                foreach ($documents as $document) {
-                    $this->storeDocument($application, $applicant, $document, $storedPaths);
-                }
-
-                $this->recordStatusEvent($application, $applicant, 'submitted', null, WorkforceApplicationStatus::Submitted, null);
-                $this->auditWriter->record(
-                    'workforce_application.submitted',
-                    $application,
-                    ['application_type' => $type->value],
-                    $applicant,
-                );
-
-                return $application;
+                return $this->createApplication($applicant, $type, $attributes, $documents, $storedPaths);
             });
         } catch (Throwable $exception) {
             if ($storedPaths !== []) {
                 Storage::disk('private')->delete($storedPaths);
+            }
+
+            throw $exception;
+        }
+    }
+
+    /**
+     * @param  array{name: string, email: string, password: string, phone?: string|null, age: int|string, locality: string, home_latitude?: numeric-string|float|null, home_longitude?: numeric-string|float|null, privacy_acknowledged: string|bool, position_title: string, requested_unit_id: int|string, experience_summary?: string|null, qualification_summary?: string|null}  $attributes
+     * @param  array<int, UploadedFile>  $documents
+     * @return array{user: User, application: WorkforceApplication}
+     */
+    public function registerApplicant(WorkforceApplicationType $type, array $attributes, array $documents): array
+    {
+        $storedPaths = [];
+
+        try {
+            return DB::transaction(function () use ($type, $attributes, $documents, &$storedPaths): array {
+                $user = User::query()->create([
+                    'name' => trim($attributes['name']),
+                    'email' => mb_strtolower(trim($attributes['email'])),
+                    'password' => $attributes['password'],
+                    'account_status' => AccountStatus::Active,
+                    'email_verified_at' => config('civictrack.require_email_verification') ? null : now(),
+                ]);
+                $user->assignRole(RoleName::Citizen->value);
+                $user->citizenProfile()->create([
+                    'phone' => $attributes['phone'] ?? null,
+                    'age' => $attributes['age'],
+                    'locality' => trim($attributes['locality']),
+                    'home_latitude' => isset($attributes['home_latitude']) ? round((float) $attributes['home_latitude'], 3) : null,
+                    'home_longitude' => isset($attributes['home_longitude']) ? round((float) $attributes['home_longitude'], 3) : null,
+                    'preferred_locale' => app()->getLocale(),
+                    'privacy_notice_version' => config('civictrack.privacy_notice_version'),
+                    'privacy_acknowledged_at' => now(),
+                ]);
+                $this->auditWriter->record('citizen.registered', $user, [
+                    'registration_context' => 'workforce_applicant',
+                    'application_type' => $type->value,
+                ], $user);
+
+                $application = $this->createApplication($user, $type, $attributes, $documents, $storedPaths);
+
+                return ['user' => $user, 'application' => $application];
+            });
+        } catch (Throwable $exception) {
+            if ($storedPaths !== []) {
+                Storage::disk('private')->delete($storedPaths);
+            }
+
+            if ($exception instanceof QueryException
+                && User::query()->where('email', mb_strtolower(trim($attributes['email'])))->exists()) {
+                throw ValidationException::withMessages(['email' => 'An account with this email address already exists.']);
             }
 
             throw $exception;
@@ -234,6 +232,77 @@ class WorkforceApplicationService
 
             throw $exception;
         }
+    }
+
+    /**
+     * @param  array{position_title: string, requested_unit_id: int|string, experience_summary?: string|null, qualification_summary?: string|null}  $attributes
+     * @param  array<int, UploadedFile>  $documents
+     * @param  array<int, string>  $storedPaths
+     */
+    private function createApplication(
+        User $applicant,
+        WorkforceApplicationType $type,
+        array $attributes,
+        array $documents,
+        array &$storedPaths,
+    ): WorkforceApplication {
+        if (! $applicant->isActive() || ! $applicant->hasRole(RoleName::Citizen->value)) {
+            throw ValidationException::withMessages(['application' => 'An active citizen account is required to apply.']);
+        }
+
+        if ($applicant->hasAnyRole([RoleName::Staff->value, RoleName::Worker->value])) {
+            throw ValidationException::withMessages(['application' => 'An account with an approved workforce role cannot submit another workforce application.']);
+        }
+
+        if (WorkforceApplication::query()
+            ->where('user_id', $applicant->id)
+            ->whereIn('status', [
+                WorkforceApplicationStatus::Submitted->value,
+                WorkforceApplicationStatus::UnderReview->value,
+                WorkforceApplicationStatus::InformationRequested->value,
+            ])
+            ->exists()) {
+            throw ValidationException::withMessages(['application' => 'You already have a workforce application awaiting a decision.']);
+        }
+
+        $this->registrationControls->lockOpenContext($type->registrationRole());
+
+        $organizationUnit = OrganizationUnit::query()
+            ->whereKey($attributes['requested_unit_id'])
+            ->where('is_active', true)
+            ->lockForUpdate()
+            ->first();
+
+        if ($organizationUnit === null) {
+            throw ValidationException::withMessages(['requested_unit_id' => 'Choose an active organization unit.']);
+        }
+
+        $applicationPrefix = $type === WorkforceApplicationType::Staff ? 'ST' : 'WK';
+        $application = WorkforceApplication::query()->create([
+            'user_id' => $applicant->id,
+            'requested_unit_id' => $organizationUnit->id,
+            'application_number' => 'CT-'.$applicationPrefix.'-'.Str::upper((string) Str::ulid()),
+            'application_type' => $type,
+            'status' => WorkforceApplicationStatus::Submitted,
+            'position_title' => trim($attributes['position_title']),
+            'experience_summary' => $attributes['experience_summary'] ?? null,
+            'qualification_summary' => $attributes['qualification_summary'] ?? null,
+            'submitted_at' => now(),
+        ]);
+
+        foreach ($documents as $document) {
+            $this->storeDocument($application, $applicant, $document, $storedPaths);
+        }
+
+        $this->recordStatusEvent($application, $applicant, 'submitted', null, WorkforceApplicationStatus::Submitted, null);
+        $this->auditWriter->record(
+            'workforce_application.submitted',
+            $application,
+            ['application_type' => $type->value],
+            $applicant,
+        );
+
+        return $application;
     }
 
     /**

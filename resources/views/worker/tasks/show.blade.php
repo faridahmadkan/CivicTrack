@@ -3,7 +3,7 @@
 @section('title', $task->task_number)
 
 @section('content')
-    <a href="{{ route('worker.tasks.index') }}" class="text-sm font-semibold text-forest-800 hover:text-forest-950">← My tasks</a>
+    <x-back-link href="{{ route('worker.tasks.index') }}">My tasks</x-back-link>
     <div class="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div class="space-y-5">
             <section class="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-7">

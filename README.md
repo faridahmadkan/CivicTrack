@@ -48,7 +48,9 @@ The required initial administrator identity is **Farid Ahmad Khan** (`farid@civi
 php artisan civictrack:bootstrap-admin --no-interaction
 ```
 
-The command creates that administrator only if the email does not already exist and refuses to change an existing account. Remove the bootstrap password from the environment after creation. Regular administrator provisioning can create citizen, staff, and field-worker accounts without opening public registration or applications; those accounts receive password setup and email verification instructions.
+The command creates that administrator only if the email does not already exist and refuses to change an existing account. Remove the bootstrap password from the environment after creation. Regular administrator provisioning can create citizen, staff, and field-worker accounts without opening public registration or applications; those accounts receive a password setup link and, when required, an email verification link.
+
+Public citizen, staff-applicant, and field-worker-applicant account creation follows the corresponding administrator registration controls. Workforce applicants receive a citizen account immediately, while staff or worker permissions remain unavailable until an administrator approves the application. Set `CIVICTRACK_REQUIRE_EMAIL_VERIFICATION=false` to allow citizen and workforce accounts to use their workspace without confirming email; the default is `true`. After changing deployment environment values, refresh Laravel's cached configuration as part of deployment.
 
 Fictional Afghan-context development units can be seeded by setting `CIVICTRACK_SEED_DEMO=true` in a local or test environment. A demo password of at least 16 characters must be provided as `CIVICTRACK_DEMO_PASSWORD` before labeled demo accounts are created. Demo users use `@civictrack.test` addresses. Demo seeding is not enabled in production and never updates existing account passwords. Do not put production credentials in demo settings.
 

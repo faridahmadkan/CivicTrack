@@ -4,7 +4,7 @@
 @section('eyebrow', 'Report review and triage')
 
 @section('content')
-    <a href="{{ route('staff.reports.index') }}" class="text-sm font-semibold text-forest-800 hover:text-forest-950">← Report queue</a>
+    <x-back-link href="{{ route('staff.reports.index') }}">Report queue</x-back-link>
     <div class="mt-5 grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <div class="space-y-5">
             <section class="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-7">

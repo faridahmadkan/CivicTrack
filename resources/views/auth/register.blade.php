@@ -6,7 +6,7 @@
     <div>
         <p class="text-xs font-bold uppercase tracking-[0.18em] text-forest-700">Resident access</p>
         <h1 class="mt-3 text-3xl font-semibold tracking-tight text-forest-950">Create your account</h1>
-        <p class="mt-2 text-sm leading-6 text-slate-600">Use an email address you can access. We’ll ask you to verify it before opening your account workspace.</p>
+        <p class="mt-2 text-sm leading-6 text-slate-600">Use an email address you can access. @if (config('civictrack.require_email_verification')) We’ll ask you to verify it before opening your account workspace.@else Your account can open immediately without email verification.@endif</p>
     </div>
 
     <div class="mt-6"><x-form-messages /></div>
@@ -30,11 +30,7 @@
                 <input id="email" name="email" type="email" value="{{ old('email') }}" required autocomplete="email" inputmode="email" class="w-full rounded-lg border border-line bg-white px-3.5 py-3 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-forest-700 focus:ring-4 focus:ring-forest-100" placeholder="you@example.com">
                 @error('email')<p class="mt-1.5 text-xs font-medium text-red-700">{{ $message }}</p>@enderror
             </div>
-            <div>
-                <label for="phone" class="mb-2 block text-sm font-semibold text-slate-800">Phone number <span class="font-normal text-slate-500">(optional)</span></label>
-                <input id="phone" name="phone" type="tel" value="{{ old('phone') }}" autocomplete="tel" class="w-full rounded-lg border border-line bg-white px-3.5 py-3 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-forest-700 focus:ring-4 focus:ring-forest-100" placeholder="+1 555 010 1234">
-                @error('phone')<p class="mt-1.5 text-xs font-medium text-red-700">{{ $message }}</p>@enderror
-            </div>
+            <x-citizen-profile-fields :map-center="$mapCenter" id-prefix="citizen-signup" />
             <div>
                 <label for="password" class="mb-2 block text-sm font-semibold text-slate-800">Password</label>
                 <input id="password" name="password" type="password" required autocomplete="new-password" class="w-full rounded-lg border border-line bg-white px-3.5 py-3 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-forest-700 focus:ring-4 focus:ring-forest-100">
@@ -51,7 +47,7 @@
             </label>
             @error('privacy_acknowledged')<p class="-mt-3 text-xs font-medium text-red-700">{{ $message }}</p>@enderror
             @error('registration')<p class="text-xs font-medium text-red-700">{{ $message }}</p>@enderror
-            <button type="submit" class="inline-flex w-full items-center justify-center rounded-lg bg-forest-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-forest-800">Create citizen account</button>
+            <button type="submit" class="group inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-forest-900 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-forest-950/10 transition duration-200 hover:-translate-y-0.5 hover:bg-forest-800 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">Create citizen account <svg viewBox="0 0 20 20" class="size-4 transition-transform duration-200 group-hover:translate-x-0.5" fill="none" aria-hidden="true"><path d="M4.5 10h11m0 0-4.5-4.5m4.5 4.5-4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
         </form>
         <p class="mt-6 text-center text-sm text-slate-600">Already registered? <a href="{{ route('login') }}" class="font-semibold text-forest-800 underline decoration-forest-200 underline-offset-4 hover:text-forest-950">Sign in</a></p>
     @endif

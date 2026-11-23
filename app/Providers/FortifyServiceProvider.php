@@ -43,6 +43,7 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::loginView(fn () => view('auth.login'));
         Fortify::registerView(fn () => view('auth.register', [
             'registrationOpen' => app(RegistrationControlService::class)->isOpen(RoleName::Citizen),
+            'mapCenter' => [config('civictrack.map.latitude'), config('civictrack.map.longitude')],
         ]));
         Fortify::requestPasswordResetLinkView(fn () => view('auth.forgot-password'));
         Fortify::resetPasswordView(fn (Request $request) => view('auth.reset-password', ['request' => $request]));
@@ -51,7 +52,7 @@ class FortifyServiceProvider extends ServiceProvider
         $dummyPasswordHash = null;
 
         Fortify::authenticateUsing(function (Request $request) use (&$dummyPasswordHash): ?User {
-            return (new Timebox())->call(function () use ($request, &$dummyPasswordHash): ?User {
+            return (new Timebox)->call(function () use ($request, &$dummyPasswordHash): ?User {
                 $email = Str::lower($request->string('email')->toString());
                 $password = $request->input('password');
                 $user = User::query()->where('email', $email)->first();

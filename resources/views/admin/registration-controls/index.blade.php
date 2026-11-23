@@ -4,7 +4,7 @@
 @section('eyebrow', 'Public access settings')
 
 @section('content')
-    <a href="{{ route('admin.home') }}" class="mb-6 inline-flex rounded-lg text-sm font-semibold text-forest-800 hover:text-forest-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700">← Administration home</a>
+    <x-back-link href="{{ route('admin.home') }}" class="mb-6">Administration home</x-back-link>
     <div class="max-w-3xl">
         <p class="text-xs font-bold uppercase tracking-[0.18em] text-forest-700">Access governance</p>
         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-forest-950">Registration controls</h1>

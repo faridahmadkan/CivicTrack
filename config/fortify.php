@@ -164,7 +164,7 @@ return [
     'features' => [
         Features::registration(),
         Features::resetPasswords(),
-        Features::emailVerification(),
+        ...(config('civictrack.require_email_verification') ? [Features::emailVerification()] : []),
         Features::updateProfileInformation(),
         Features::updatePasswords(),
     ],

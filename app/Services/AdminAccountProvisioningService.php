@@ -50,6 +50,7 @@ class AdminAccountProvisioningService
                     'email' => mb_strtolower(trim($attributes['email'])),
                     'password' => Str::random(64),
                     'account_status' => AccountStatus::Active,
+                    'email_verified_at' => config('civictrack.require_email_verification') ? null : now(),
                 ]);
                 $user->assignRole($role->value);
 
@@ -79,7 +80,7 @@ class AdminAccountProvisioningService
                     [
                         'role' => $role->value,
                         'organization_unit_id' => $unit?->id,
-                        'email_verification_required' => true,
+                        'email_verification_required' => config('civictrack.require_email_verification'),
                     ],
                     $administrator,
                 );

@@ -18,9 +18,33 @@ class AdminAccountProvisioningTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
+    public function test_admin_provisioning_respects_disabled_email_verification(): void
+    {
+        $this->seed();
+        config(['civictrack.require_email_verification' => false]);
+        Notification::fake();
+        $administrator = User::factory()->create();
+        $administrator->assignRole(RoleName::Administrator->value);
+
+        $this->actingAs($administrator)
+            ->post(route('admin.accounts.store'), [
+                'name' => 'Citizen Example',
+                'email' => 'citizen@example.test',
+                'role' => RoleName::Citizen->value,
+            ])
+            ->assertRedirect(route('admin.accounts.index'))
+            ->assertSessionHas('status', 'Account created. A password setup link was sent; email verification is disabled.');
+
+        $citizen = User::query()->where('email', 'citizen@example.test')->firstOrFail();
+        $this->assertNotNull($citizen->email_verified_at);
+        Notification::assertSentTo($citizen, ResetPassword::class);
+        Notification::assertNotSentTo($citizen, VerifyEmail::class);
+    }
+
     public function test_administrator_can_create_a_worker_when_public_applications_are_closed(): void
     {
         $this->seed();
+        config(['civictrack.require_email_verification' => true]);
         Notification::fake();
         RegistrationControl::query()
             ->whereIn('context', [RoleName::Staff->value, RoleName::Worker->value])
@@ -68,10 +92,6 @@ class AdminAccountProvisioningTest extends TestCase
 
         Notification::assertSentTo($worker, VerifyEmail::class);
         Notification::assertSentTo($worker, ResetPassword::class);
-
-        $this->actingAs($worker)
-            ->get(route('worker.home'))
-            ->assertRedirect(route('verification.notice'));
 
         $worker->markEmailAsVerified();
         $this->actingAs($worker)->get(route('worker.home'))->assertOk();

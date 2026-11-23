@@ -4,7 +4,7 @@
 @section('eyebrow', 'Create a field work order')
 
 @section('content')
-    <a href="{{ route('staff.reports.show', $report) }}" class="text-sm font-semibold text-forest-800 hover:text-forest-950">← Return to report</a>
+    <x-back-link href="{{ route('staff.reports.show', $report) }}">Return to report</x-back-link>
     <div class="mt-5 max-w-4xl">
         <p class="text-xs font-bold uppercase tracking-[0.18em] text-forest-700">{{ $report->public_reference }} · {{ $report->category->name }}</p>
         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-forest-950">Plan field work</h1>

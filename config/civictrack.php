@@ -49,9 +49,10 @@ $placeSearchConfigured = is_array($placeSearchUrlParts)
 
 return [
     'privacy_notice_version' => env('CIVICTRACK_PRIVACY_NOTICE_VERSION', '2026-11-23'),
+    'require_email_verification' => (bool) env('CIVICTRACK_REQUIRE_EMAIL_VERIFICATION', true),
     'map' => [
-        'latitude' => (float) env('CIVICTRACK_MAP_LATITUDE', 0),
-        'longitude' => (float) env('CIVICTRACK_MAP_LONGITUDE', 0),
+        'latitude' => (float) env('CIVICTRACK_MAP_LATITUDE', 34.5553),
+        'longitude' => (float) env('CIVICTRACK_MAP_LONGITUDE', 69.2075),
         'street_tile_url' => $streetTileUrl,
         'street_attribution' => $streetAttribution,
         'satellite_tile_url' => $satelliteTileUrl,

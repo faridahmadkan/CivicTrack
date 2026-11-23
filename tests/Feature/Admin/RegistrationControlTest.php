@@ -45,6 +45,8 @@ class RegistrationControlTest extends TestCase
         $this->post(route('register'), [
             'name' => 'Amina Rahimi',
             'email' => 'amina@example.test',
+            'age' => 29,
+            'locality' => 'Karte Seh, Kabul',
             'password' => 'A secure citizen password 2026!',
             'password_confirmation' => 'A secure citizen password 2026!',
             'privacy_acknowledged' => '1',
