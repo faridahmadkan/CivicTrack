@@ -59,6 +59,16 @@ class CivicReport extends Model
         return $this->hasMany(ReportStatusEvent::class)->orderBy('occurred_at')->orderBy('id');
     }
 
+    public function outgoingRelationships(): HasMany
+    {
+        return $this->hasMany(ReportRelationship::class, 'report_id')->orderBy('created_at')->orderBy('id');
+    }
+
+    public function incomingRelationships(): HasMany
+    {
+        return $this->hasMany(ReportRelationship::class, 'related_report_id')->orderBy('created_at')->orderBy('id');
+    }
+
     public function comments(): HasMany
     {
         return $this->hasMany(ReportComment::class)->orderBy('created_at')->orderBy('id');

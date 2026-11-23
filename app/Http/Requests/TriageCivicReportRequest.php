@@ -26,9 +26,14 @@ class TriageCivicReportRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => ['required', Rule::enum(CivicReportStatus::class)],
+            'status' => ['required', Rule::in([
+                CivicReportStatus::UnderReview->value,
+                CivicReportStatus::Acknowledged->value,
+                CivicReportStatus::NeedsInformation->value,
+                CivicReportStatus::Rejected->value,
+            ])],
             'priority' => ['required', Rule::enum(CivicReportPriority::class)],
-            'reason' => ['nullable', 'string', 'max:1000', 'required_if:status,needs_information,rejected,duplicate'],
+            'reason' => ['nullable', 'string', 'max:1000', 'required_if:status,needs_information,rejected'],
             'is_public' => ['sometimes', 'boolean'],
         ];
     }
