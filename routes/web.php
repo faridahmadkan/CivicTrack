@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Account\AccountHomeController;
 use App\Http\Controllers\Account\NotificationCenterController;
+use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\AdminHomeController;
 use App\Http\Controllers\Admin\AuditEventController;
 use App\Http\Controllers\Admin\OrganizationUnitController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\Admin\ServiceCategoryController;
 use App\Http\Controllers\Admin\WorkforceApplicationController as AdminWorkforceApplicationController;
 use App\Http\Controllers\Citizen\CivicReportController as CitizenCivicReportController;
 use App\Http\Controllers\Citizen\DashboardController as CitizenDashboardController;
+use App\Http\Controllers\PrivateFileController;
 use App\Http\Controllers\Public\CommunityMapController;
 use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\PlaceSearchController;
@@ -44,7 +46,7 @@ Route::post('/reports/{report}/feedback', [ReportFeedbackController::class, 'sto
     ->middleware('throttle:4,1')->name('public.reports.feedback.store');
 Route::post('/reports/{report}/reopen-requests', [ReportFeedbackController::class, 'requestReopen'])
     ->middleware('throttle:4,1')->name('public.reports.reopen-requests.store');
-Route::get('/reports/{report}/attachments/{attachment}', [ReportSubmissionController::class, 'downloadAttachment'])
+Route::get('/reports/{report}/attachments/{attachment}', [PrivateFileController::class, 'reportAttachment'])
     ->name('public.reports.track.attachments.download');
 
 Route::middleware(['auth', 'verified', 'account.active', 'cache.headers:no_store;private', 'can:reports.view.own'])
@@ -69,7 +71,7 @@ Route::middleware(['auth', 'verified', 'account.active', 'cache.headers:no_store
         ->name('applications.show');
     Route::put('/applications/{workforceApplication}/information', [WorkforceApplicationController::class, 'provideInformation'])
         ->name('applications.information');
-    Route::get('/application-documents/{document}', [WorkforceApplicationController::class, 'downloadDocument'])
+    Route::get('/application-documents/{document}', [PrivateFileController::class, 'workforceDocument'])
         ->name('application-documents.download');
 });
 
@@ -82,7 +84,7 @@ Route::middleware(['auth', 'verified', 'account.active', 'cache.headers:no_store
         Route::post('/', [CitizenCivicReportController::class, 'store'])->name('store');
         Route::get('/{report}', [CitizenCivicReportController::class, 'show'])->name('show');
         Route::post('/{report}/comments', [CitizenCivicReportController::class, 'comment'])->name('comments.store');
-        Route::get('/{report}/attachments/{attachment}', [CitizenCivicReportController::class, 'downloadAttachment'])
+        Route::get('/{report}/attachments/{attachment}', [PrivateFileController::class, 'reportAttachment'])
             ->name('attachments.download');
     });
 
@@ -94,7 +96,7 @@ Route::middleware(['auth', 'verified', 'account.active', 'cache.headers:no_store
         Route::get('/{civicReport}', [StaffCivicReportController::class, 'show'])->name('show');
         Route::put('/{civicReport}/triage', [StaffCivicReportController::class, 'triage'])->name('triage');
         Route::post('/{civicReport}/comments', [StaffCivicReportController::class, 'comment'])->name('comments.store');
-        Route::get('/{civicReport}/attachments/{attachment}', [StaffCivicReportController::class, 'downloadAttachment'])
+        Route::get('/{civicReport}/attachments/{attachment}', [PrivateFileController::class, 'staffReportAttachment'])
             ->name('attachments.download');
         Route::post('/{report}/work-orders', [WorkOrderController::class, 'store'])->name('work-orders.store');
     });
@@ -111,7 +113,7 @@ Route::middleware(['auth', 'verified', 'account.active', 'cache.headers:no_store
             ->middleware('can:feedback.rate_workers')->name('tasks.ratings.store');
         Route::put('/reopen-requests/{reopenRequest}', [ReportReopenController::class, 'review'])
             ->middleware('can:reports.view.department')->name('reopen-requests.review');
-        Route::get('/tasks/{workTask}/evidence/{evidence}', [TaskManagementController::class, 'downloadEvidence'])
+        Route::get('/tasks/{workTask}/evidence/{evidence}', [PrivateFileController::class, 'staffTaskEvidence'])
             ->name('tasks.evidence.download');
     });
 
@@ -128,7 +130,7 @@ Route::middleware(['auth', 'verified', 'account.active', 'cache.headers:no_store
         Route::post('/tasks/{workTask}/updates', [WorkerTaskController::class, 'update'])->name('tasks.updates.store');
         Route::post('/tasks/{workTask}/evidence', [WorkerTaskController::class, 'storeEvidence'])->name('tasks.evidence.store');
         Route::post('/tasks/{workTask}/submit', [WorkerTaskController::class, 'submit'])->name('tasks.submit');
-        Route::get('/tasks/{workTask}/evidence/{evidence}', [WorkerTaskController::class, 'downloadEvidence'])
+        Route::get('/tasks/{workTask}/evidence/{evidence}', [PrivateFileController::class, 'taskEvidence'])
             ->name('tasks.evidence.download');
     });
 
@@ -137,6 +139,11 @@ Route::middleware(['auth', 'verified', 'account.active', 'cache.headers:no_store
     ->name('admin.')
     ->group(function (): void {
         Route::get('/', AdminHomeController::class)->name('home');
+
+        Route::middleware('can:accounts.manage')->group(function (): void {
+            Route::get('/accounts', [AccountController::class, 'index'])->name('accounts.index');
+            Route::post('/accounts', [AccountController::class, 'store'])->name('accounts.store');
+        });
 
         Route::middleware('can:organization.manage')->group(function (): void {
             Route::get('/organization-units', [OrganizationUnitController::class, 'index'])->name('organization-units.index');
@@ -176,6 +183,6 @@ Route::middleware(['auth', 'verified', 'account.active', 'cache.headers:no_store
         Route::put('/workforce-applications/{workforceApplication}', [AdminWorkforceApplicationController::class, 'review'])
             ->can('review', 'workforceApplication')
             ->name('workforce-applications.review');
-        Route::get('/workforce-application-documents/{document}', [AdminWorkforceApplicationController::class, 'downloadDocument'])
+        Route::get('/workforce-application-documents/{document}', [PrivateFileController::class, 'workforceDocument'])
             ->name('workforce-application-documents.download');
     });

@@ -22,6 +22,7 @@ use App\Models\WorkTask;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
 use Throwable;
@@ -30,9 +31,15 @@ class TaskAssignmentService
 {
     public function __construct(private readonly AuditWriter $auditWriter) {}
 
-    public function assign(WorkTask $task, User $worker, User $actor, ?string $instructions, ?string $reason): TaskAssignment
-    {
-        $assignment = DB::transaction(function () use ($task, $worker, $actor, $instructions, $reason): TaskAssignment {
+    public function assign(
+        WorkTask $task,
+        User $worker,
+        User $actor,
+        ?string $instructions,
+        ?string $reason,
+        ?int $replaceAssignmentId = null,
+    ): TaskAssignment {
+        $assignment = DB::transaction(function () use ($task, $worker, $actor, $instructions, $reason, $replaceAssignmentId): TaskAssignment {
             $task = WorkTask::query()->lockForUpdate()->findOrFail($task->id);
             $workOrder = WorkOrder::query()->lockForUpdate()->findOrFail($task->work_order_id);
             $this->authorizeDepartmentAccess($workOrder, $actor);
@@ -50,37 +57,49 @@ class TaskAssignmentService
                 throw ValidationException::withMessages(['workTask' => 'This task is not available for assignment.']);
             }
 
-            $currentAssignment = TaskAssignment::query()
-                ->where('work_task_id', $task->id)
-                ->whereNull('ended_at')
-                ->lockForUpdate()
-                ->first();
-
-            if ($currentAssignment !== null) {
+            if ($replaceAssignmentId !== null) {
                 if (trim((string) $reason) === '') {
-                    throw ValidationException::withMessages(['reason' => 'A reason is required when changing an active assignment.']);
+                    throw ValidationException::withMessages(['reason' => 'A reason is required when replacing an assigned worker.']);
                 }
 
-                if ($currentAssignment->status === TaskAssignmentStatus::Submitted) {
-                    throw ValidationException::withMessages(['workTask' => 'A submitted task must be verified before it can be reassigned.']);
+                $assignmentToReplace = TaskAssignment::query()
+                    ->where('work_task_id', $task->id)
+                    ->whereKey($replaceAssignmentId)
+                    ->whereNull('ended_at')
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($assignmentToReplace === null) {
+                    throw ValidationException::withMessages(['replace_assignment_id' => 'Choose a current assignment on this task.']);
                 }
 
-                if ($currentAssignment->worker_id === $worker->id) {
+                if ($assignmentToReplace->status === TaskAssignmentStatus::Submitted) {
+                    throw ValidationException::withMessages(['replace_assignment_id' => 'A submitted task must be verified before its team can be changed.']);
+                }
+
+                if ($assignmentToReplace->worker_id === $worker->id) {
                     throw ValidationException::withMessages(['worker_id' => 'Choose a different worker for this reassignment.']);
                 }
 
-                $currentAssignment->forceFill([
+                $assignmentToReplace->forceFill([
                     'status' => TaskAssignmentStatus::Reassigned,
                     'ended_at' => now(),
                     'end_reason' => trim((string) $reason),
                 ])->save();
             }
 
+            if (TaskAssignment::query()
+                ->where('work_task_id', $task->id)
+                ->where('worker_id', $worker->id)
+                ->whereNull('ended_at')
+                ->exists()) {
+                throw ValidationException::withMessages(['worker_id' => 'This worker is already assigned to the task.']);
+            }
+
             $worker = User::query()->lockForUpdate()->findOrFail($worker->id);
             $this->authorizeWorker($worker, $workOrder->organization_unit_id, $task->id);
             $this->assertDependenciesComplete($task);
 
-            $task->forceFill(['status' => WorkTaskStatus::Assigned])->save();
             $assignment = $task->assignments()->create([
                 'worker_id' => $worker->id,
                 'assigned_by' => $actor->id,
@@ -88,6 +107,8 @@ class TaskAssignmentService
                 'assignment_instructions' => $instructions === null ? null : trim($instructions),
                 'assigned_at' => now(),
             ]);
+
+            $task->forceFill(['status' => $this->taskStatusForActiveAssignments($task)])->save();
 
             $this->recordTaskUpdate($task, $assignment, $actor, 'assigned', null, WorkTaskStatus::Assigned, $reason);
             $this->auditWriter->record(
@@ -159,8 +180,9 @@ class TaskAssignmentService
                 'ended_at' => now(),
                 'end_reason' => trim($reason),
             ])->save();
-            $task->forceFill(['status' => WorkTaskStatus::Queued])->save();
-            $this->recordTaskUpdate($task, $assignment, $worker, 'declined', $previousStatus, WorkTaskStatus::Queued, trim($reason));
+            $nextStatus = $this->taskStatusForActiveAssignments($task);
+            $task->forceFill(['status' => $nextStatus])->save();
+            $this->recordTaskUpdate($task, $assignment, $worker, 'declined', $previousStatus, $nextStatus, trim($reason));
             $this->auditWriter->record('work_task.assignment_declined', $task, ['reason' => trim($reason)], $worker);
 
             return $assignment->fresh(['task.workOrder.report']);
@@ -195,16 +217,19 @@ class TaskAssignmentService
 
     public function addProgressUpdate(WorkTask $task, User $worker, string $body): TaskUpdate
     {
-        $assignment = $this->activeAssignmentForWorker($task, $worker);
+        return DB::transaction(function () use ($task, $worker, $body): TaskUpdate {
+            $task = WorkTask::query()->lockForUpdate()->findOrFail($task->id);
+            $assignment = $this->activeAssignmentForWorker($task, $worker, true);
 
-        if (! in_array($assignment->status, [TaskAssignmentStatus::InProgress, TaskAssignmentStatus::NeedsRework], true)) {
-            throw ValidationException::withMessages(['body' => 'Start work before adding a progress update.']);
-        }
+            if (! in_array($assignment->status, [TaskAssignmentStatus::InProgress, TaskAssignmentStatus::NeedsRework], true)) {
+                throw ValidationException::withMessages(['body' => 'Start work before adding a progress update.']);
+            }
 
-        $update = $this->recordTaskUpdate($task, $assignment, $worker, 'progress_update', $task->status, $task->status, trim($body));
-        $this->auditWriter->record('work_task.progress_updated', $task, [], $worker);
+            $update = $this->recordTaskUpdate($task, $assignment, $worker, 'progress_update', $task->status, $task->status, trim($body));
+            $this->auditWriter->record('work_task.progress_updated', $task, [], $worker);
 
-        return $update;
+            return $update;
+        });
     }
 
     /** @param array<int, UploadedFile> $files */
@@ -230,7 +255,7 @@ class TaskAssignmentService
             });
         } catch (Throwable $exception) {
             if ($storedPaths !== []) {
-                Storage::disk('local')->delete($storedPaths);
+                Storage::disk('private')->delete($storedPaths);
             }
 
             throw $exception;
@@ -251,19 +276,27 @@ class TaskAssignmentService
                 throw ValidationException::withMessages(['evidence' => 'Add at least one piece of work evidence before submitting for verification.']);
             }
 
-            $previousStatus = $task->status;
-            $task->forceFill([
-                'status' => WorkTaskStatus::SubmittedForReview,
-                'submitted_at' => now(),
-            ])->save();
             $assignment->forceFill(['status' => TaskAssignmentStatus::Submitted])->save();
+            $allActiveAssignmentsSubmitted = ! TaskAssignment::query()
+                ->where('work_task_id', $task->id)
+                ->whereNull('ended_at')
+                ->where('status', '!=', TaskAssignmentStatus::Submitted->value)
+                ->exists();
+            $previousStatus = $task->status;
+            $nextStatus = $allActiveAssignmentsSubmitted
+                ? WorkTaskStatus::SubmittedForReview
+                : ($task->status === WorkTaskStatus::NeedsRework ? WorkTaskStatus::NeedsRework : WorkTaskStatus::InProgress);
+            $task->forceFill([
+                'status' => $nextStatus,
+                'submitted_at' => $allActiveAssignmentsSubmitted ? now() : null,
+            ])->save();
             $this->recordTaskUpdate(
                 $task,
                 $assignment,
                 $worker,
                 'submitted_for_verification',
                 $previousStatus,
-                WorkTaskStatus::SubmittedForReview,
+                $nextStatus,
                 null,
             );
             $this->auditWriter->record('work_task.submitted_for_verification', $task, [], $worker);
@@ -353,6 +386,32 @@ class TaskAssignmentService
         return $assignment;
     }
 
+    private function taskStatusForActiveAssignments(WorkTask $task): WorkTaskStatus
+    {
+        $statuses = TaskAssignment::query()
+            ->where('work_task_id', $task->id)
+            ->whereNull('ended_at')
+            ->pluck('status');
+
+        if ($statuses->isEmpty()) {
+            return WorkTaskStatus::Queued;
+        }
+
+        if ($statuses->every(static fn (TaskAssignmentStatus $status): bool => $status === TaskAssignmentStatus::Submitted)) {
+            return WorkTaskStatus::SubmittedForReview;
+        }
+
+        if ($statuses->contains(TaskAssignmentStatus::InProgress)) {
+            return WorkTaskStatus::InProgress;
+        }
+
+        if ($statuses->contains(TaskAssignmentStatus::NeedsRework)) {
+            return WorkTaskStatus::NeedsRework;
+        }
+
+        return WorkTaskStatus::Assigned;
+    }
+
     /** @param array<int, string> $storedPaths */
     private function storeEvidence(
         WorkTask $task,
@@ -363,7 +422,7 @@ class TaskAssignmentService
         ?string $caption,
         array &$storedPaths,
     ): TaskEvidence {
-        $path = $file->store('task-evidence/'.$task->id, 'local');
+        $path = $file->store('task-evidence/'.$task->id, 'private');
 
         if ($path === false) {
             throw new RuntimeException('The task evidence could not be stored.');
@@ -381,9 +440,9 @@ class TaskAssignmentService
         return $task->evidence()->create([
             'task_assignment_id' => $assignment->id,
             'uploaded_by' => $worker->id,
-            'storage_disk' => 'local',
+            'storage_disk' => 'private',
             'storage_path' => $path,
-            'original_name' => \Illuminate\Support\Str::limit($originalName, 180, ''),
+            'original_name' => Str::limit($originalName, 180, ''),
             'mime_type' => $file->getMimeType() ?? 'application/octet-stream',
             'size_bytes' => $file->getSize() ?? 0,
             'sha256' => $hash,

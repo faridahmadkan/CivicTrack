@@ -41,7 +41,13 @@ class StoreCivicReportRequest extends FormRequest
             'address' => ['nullable', 'string', 'max:255'],
             'guest_email' => ['nullable', 'email:rfc', 'max:254'],
             'documents' => ['nullable', 'array', 'max:5'],
-            'documents.*' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:10240'],
+            'documents.*' => [
+                'required',
+                'file',
+                'mimes:jpg,jpeg,png,webp,pdf',
+                'extensions:jpg,jpeg,png,webp,pdf',
+                'max:10240',
+            ],
         ];
     }
 }

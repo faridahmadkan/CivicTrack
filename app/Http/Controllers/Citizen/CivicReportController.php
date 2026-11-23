@@ -2,18 +2,17 @@
 
 namespace App\Http\Controllers\Citizen;
 
+use App\Enums\ReportAttachmentVisibility;
+use App\Enums\ReportCommentVisibility;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCivicReportRequest;
 use App\Http\Requests\StoreReportCommentRequest;
 use App\Models\CivicReport;
-use App\Models\ReportAttachment;
 use App\Models\ServiceCategory;
 use App\Services\CivicReportService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CivicReportController extends Controller
 {
@@ -56,7 +55,14 @@ class CivicReportController extends Controller
     public function show(Request $request, CivicReport $report): View
     {
         abort_unless($report->isOwnedBy($request->user()), 404);
-        $report->load(['category', 'location', 'attachments', 'slaInstance', 'serviceFeedback', 'reopenRequests.reviewer']);
+        $report->load([
+            'category',
+            'location',
+            'attachments' => static fn ($query) => $query->where('visibility', ReportAttachmentVisibility::Reporter->value),
+            'slaInstance',
+            'serviceFeedback',
+            'reopenRequests.reviewer',
+        ]);
 
         return view('citizen.reports.show', ['report' => $report]);
     }
@@ -67,23 +73,8 @@ class CivicReportController extends Controller
         CivicReportService $service,
     ): RedirectResponse {
         abort_unless($report->isOwnedBy($request->user()), 404);
-        $service->addComment($report, $request->user(), $request->validated('body'), \App\Enums\ReportCommentVisibility::Public);
+        $service->addComment($report, $request->user(), $request->validated('body'), ReportCommentVisibility::Public);
 
         return to_route('citizen.reports.show', $report)->with('status', 'Your update has been added to the report.');
-    }
-
-    public function downloadAttachment(
-        Request $request,
-        CivicReport $report,
-        ReportAttachment $attachment,
-    ): StreamedResponse {
-        abort_unless($report->isOwnedBy($request->user()) && $attachment->civic_report_id === $report->id, 404);
-        abort_unless(Storage::disk($attachment->storage_disk)->exists($attachment->storage_path), 404);
-
-        return Storage::disk($attachment->storage_disk)->download(
-            $attachment->storage_path,
-            $attachment->original_name,
-            ['Content-Type' => $attachment->mime_type, 'X-Content-Type-Options' => 'nosniff'],
-        );
     }
 }

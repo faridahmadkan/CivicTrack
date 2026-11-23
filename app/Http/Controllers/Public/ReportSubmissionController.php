@@ -2,20 +2,19 @@
 
 namespace App\Http\Controllers\Public;
 
+use App\Enums\ReportAttachmentVisibility;
+use App\Enums\ReportCommentVisibility;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AccessGuestReportRequest;
 use App\Http\Requests\StoreCivicReportRequest;
 use App\Http\Requests\StoreReportCommentRequest;
 use App\Models\CivicReport;
-use App\Models\ReportAttachment;
 use App\Models\ServiceCategory;
 use App\Services\CivicReportAccessService;
 use App\Services\CivicReportService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportSubmissionController extends Controller
 {
@@ -78,6 +77,7 @@ class ReportSubmissionController extends Controller
             return back()->withErrors(['token' => 'That access code is not valid for this report.']);
         }
 
+        $request->session()->regenerate();
         $request->session()->put('guest_report_access_'.$report->id, true);
 
         return to_route('public.reports.track.show', $report);
@@ -93,7 +93,9 @@ class ReportSubmissionController extends Controller
         }
 
         $report->load([
-            'category', 'location', 'attachments', 'slaInstance',
+            'category', 'location',
+            'attachments' => static fn ($query) => $query->where('visibility', ReportAttachmentVisibility::Reporter->value),
+            'slaInstance',
             'serviceFeedback', 'reopenRequests.reviewer',
             'statusEvents' => static fn ($query) => $query->where('citizen_visible', true),
             'comments' => static fn ($query) => $query->where('visibility', 'public'),
@@ -111,25 +113,8 @@ class ReportSubmissionController extends Controller
         $hasGuestSession = $request->session()->get('guest_report_access_'.$report->id) === true;
         abort_unless($isOwner || $hasGuestSession, 404);
 
-        $service->addComment($report, $isOwner ? $request->user() : null, $request->validated('body'), \App\Enums\ReportCommentVisibility::Public);
+        $service->addComment($report, $isOwner ? $request->user() : null, $request->validated('body'), ReportCommentVisibility::Public);
 
         return to_route('public.reports.track.show', $report)->with('status', 'Your update has been added to the report.');
-    }
-
-    public function downloadAttachment(
-        Request $request,
-        CivicReport $report,
-        ReportAttachment $attachment,
-    ): StreamedResponse {
-        $isOwner = $request->user() !== null && $report->isOwnedBy($request->user());
-        $hasGuestSession = $request->session()->get('guest_report_access_'.$report->id) === true;
-        abort_unless(($isOwner || $hasGuestSession) && $attachment->civic_report_id === $report->id, 404);
-        abort_unless(Storage::disk($attachment->storage_disk)->exists($attachment->storage_path), 404);
-
-        return Storage::disk($attachment->storage_disk)->download(
-            $attachment->storage_path,
-            $attachment->original_name,
-            ['Content-Type' => $attachment->mime_type, 'X-Content-Type-Options' => 'nosniff'],
-        );
     }
 }

@@ -36,7 +36,12 @@ class StoreWorkforceApplicationRequest extends FormRequest
             'experience_summary' => ['nullable', 'string', 'max:6000'],
             'qualification_summary' => ['nullable', 'string', 'max:6000'],
             'documents' => ['sometimes', 'array', 'max:5'],
-            'documents.*' => ['file', File::types(['pdf', 'jpg', 'jpeg', 'png'])->max(10240)],
+            'documents.*' => [
+                'file',
+                'mimes:pdf,jpg,jpeg,png',
+                'extensions:pdf,jpg,jpeg,png',
+                File::types(['pdf', 'jpg', 'jpeg', 'png'])->max(10240),
+            ],
         ];
     }
 }

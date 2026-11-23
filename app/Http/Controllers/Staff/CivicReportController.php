@@ -2,21 +2,19 @@
 
 namespace App\Http\Controllers\Staff;
 
+use App\Enums\CivicReportPriority;
 use App\Enums\CivicReportStatus;
 use App\Enums\ReportCommentVisibility;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreReportCommentRequest;
 use App\Http\Requests\TriageCivicReportRequest;
 use App\Models\CivicReport;
-use App\Models\ReportAttachment;
 use App\Models\UnitMembership;
 use App\Services\CivicReportService;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CivicReportController extends Controller
 {
@@ -104,7 +102,7 @@ class CivicReportController extends Controller
             $civicReport,
             $request->user(),
             CivicReportStatus::from($request->validated('status')),
-            \App\Enums\CivicReportPriority::from($request->validated('priority')),
+            CivicReportPriority::from($request->validated('priority')),
             $request->validated('reason'),
             (bool) $request->validated('is_public', false),
         );
@@ -121,18 +119,5 @@ class CivicReportController extends Controller
         $service->addComment($civicReport, $request->user(), $request->validated('body'), ReportCommentVisibility::Internal);
 
         return to_route('staff.reports.show', $civicReport)->with('status', 'Internal note added.');
-    }
-
-    public function downloadAttachment(CivicReport $civicReport, ReportAttachment $attachment): StreamedResponse
-    {
-        $this->authorize('view', $civicReport);
-        abort_unless($attachment->civic_report_id === $civicReport->id, 404);
-        abort_unless(Storage::disk($attachment->storage_disk)->exists($attachment->storage_path), 404);
-
-        return Storage::disk($attachment->storage_disk)->download(
-            $attachment->storage_path,
-            $attachment->original_name,
-            ['Content-Type' => $attachment->mime_type, 'X-Content-Type-Options' => 'nosniff'],
-        );
     }
 }

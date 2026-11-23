@@ -6,6 +6,7 @@ use App\Enums\PermissionName;
 use App\Enums\RoleName;
 use App\Enums\TaskAssignmentStatus;
 use App\Models\TaskAssignment;
+use App\Models\TaskEvidence;
 use App\Models\UnitMembership;
 use App\Models\User;
 use App\Models\WorkTask;
@@ -42,6 +43,37 @@ class WorkTaskPolicy
             && $this->hasActiveAssignment($user, $task);
     }
 
+    public function viewEvidence(User $user, WorkTask $task, TaskEvidence $evidence): bool
+    {
+        if ($evidence->work_task_id !== $task->id || ! $user->isActive()) {
+            return false;
+        }
+
+        if ($this->viewStaffEvidence($user, $task, $evidence)) {
+            return true;
+        }
+
+        return $user->hasRole(RoleName::Worker->value)
+            && $user->can(PermissionName::AssignmentsViewOwn->value)
+            && $evidence->assignment?->worker_id === $user->id
+            && $this->hasActiveAssignment($user, $task);
+    }
+
+    public function viewStaffEvidence(User $user, WorkTask $task, TaskEvidence $evidence): bool
+    {
+        if ($evidence->work_task_id !== $task->id || ! $user->isActive()) {
+            return false;
+        }
+
+        if ($user->can(PermissionName::ReportsManageAll->value)) {
+            return true;
+        }
+
+        return ($user->can(PermissionName::WorkOrdersManageDepartment->value)
+                || $user->can(PermissionName::VerificationManageDepartment->value))
+            && $this->isStaffMemberOfUnit($user, $task->workOrder->organization_unit_id);
+    }
+
     private function isStaffMemberOfUnit(User $user, int $organizationUnitId): bool
     {
         return UnitMembership::query()
@@ -49,6 +81,7 @@ class WorkTaskPolicy
             ->where('organization_unit_id', $organizationUnitId)
             ->where('membership_type', RoleName::Staff->value)
             ->where('status', 'active')
+            ->whereNull('ended_at')
             ->exists();
     }
 

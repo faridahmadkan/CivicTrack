@@ -14,6 +14,12 @@ class BootstrapAdministratorTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
+    public function test_bootstrap_defaults_to_the_required_administrator_identity(): void
+    {
+        $this->assertSame('Farid Ahmad Khan', config('civictrack.bootstrap_admin.name'));
+        $this->assertSame('farid@civictrack.com', config('civictrack.bootstrap_admin.email'));
+    }
+
     public function test_bootstrap_creates_a_verified_administrator_from_runtime_configuration(): void
     {
         $this->seed();

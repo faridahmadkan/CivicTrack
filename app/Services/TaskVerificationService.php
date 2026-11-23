@@ -48,24 +48,32 @@ class TaskVerificationService
                 throw ValidationException::withMessages(['reason' => 'Explain what needs to be corrected before returning the task.']);
             }
 
-            $assignment = TaskAssignment::query()
+            $assignments = TaskAssignment::query()
                 ->where('work_task_id', $task->id)
                 ->whereNull('ended_at')
                 ->lockForUpdate()
-                ->first();
+                ->get();
 
-            if ($assignment === null || $assignment->status !== TaskAssignmentStatus::Submitted) {
-                throw ValidationException::withMessages(['decision' => 'The submitted assignment is no longer active.']);
+            if ($assignments->isEmpty()
+                || $assignments->contains(static fn (TaskAssignment $assignment): bool => $assignment->status !== TaskAssignmentStatus::Submitted)) {
+                throw ValidationException::withMessages(['decision' => 'Every active worker must submit the task before staff can verify it.']);
             }
 
-            $verification = TaskVerification::query()->create([
-                'work_task_id' => $task->id,
-                'task_assignment_id' => $assignment->id,
-                'reviewed_by' => $reviewer->id,
-                'decision' => $decision,
-                'reason' => $reason === null ? null : trim($reason),
-                'reviewed_at' => now(),
-            ]);
+            $verification = null;
+            foreach ($assignments as $index => $assignment) {
+                $createdVerification = TaskVerification::query()->create([
+                    'work_task_id' => $task->id,
+                    'task_assignment_id' => $assignment->id,
+                    'reviewed_by' => $reviewer->id,
+                    'decision' => $decision,
+                    'reason' => $reason === null ? null : trim($reason),
+                    'reviewed_at' => now(),
+                ]);
+
+                if ($index === 0) {
+                    $verification = $createdVerification;
+                }
+            }
 
             $previousStatus = $task->status;
             $nextStatus = $decision === TaskVerificationDecision::Approved
@@ -77,24 +85,26 @@ class TaskVerificationService
                 'completed_at' => $decision === TaskVerificationDecision::Approved ? now() : null,
             ])->save();
 
-            $assignment->forceFill([
-                'status' => $decision === TaskVerificationDecision::Approved
-                    ? TaskAssignmentStatus::Completed
-                    : TaskAssignmentStatus::NeedsRework,
-                'ended_at' => $decision === TaskVerificationDecision::Approved ? now() : null,
-                'end_reason' => $decision === TaskVerificationDecision::NeedsRework ? trim((string) $reason) : null,
-            ])->save();
+            foreach ($assignments as $assignment) {
+                $assignment->forceFill([
+                    'status' => $decision === TaskVerificationDecision::Approved
+                        ? TaskAssignmentStatus::Completed
+                        : TaskAssignmentStatus::NeedsRework,
+                    'ended_at' => $decision === TaskVerificationDecision::Approved ? now() : null,
+                    'end_reason' => $decision === TaskVerificationDecision::NeedsRework ? trim((string) $reason) : null,
+                ])->save();
 
-            TaskUpdate::query()->create([
-                'work_task_id' => $task->id,
-                'task_assignment_id' => $assignment->id,
-                'actor_id' => $reviewer->id,
-                'event_type' => $decision === TaskVerificationDecision::Approved ? 'verified' : 'rework_requested',
-                'from_status' => $previousStatus->value,
-                'to_status' => $nextStatus->value,
-                'body' => $reason === null ? null : trim($reason),
-                'occurred_at' => now(),
-            ]);
+                TaskUpdate::query()->create([
+                    'work_task_id' => $task->id,
+                    'task_assignment_id' => $assignment->id,
+                    'actor_id' => $reviewer->id,
+                    'event_type' => $decision === TaskVerificationDecision::Approved ? 'verified' : 'rework_requested',
+                    'from_status' => $previousStatus->value,
+                    'to_status' => $nextStatus->value,
+                    'body' => $reason === null ? null : trim($reason),
+                    'occurred_at' => now(),
+                ]);
+            }
 
             $this->auditWriter->record(
                 'work_task.verification_recorded',

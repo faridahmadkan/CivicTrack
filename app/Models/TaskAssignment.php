@@ -14,6 +14,15 @@ class TaskAssignment extends Model
     /** @use HasFactory<TaskAssignmentFactory> */
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        static::saving(static function (TaskAssignment $assignment): void {
+            if ($assignment->isDirty(['worker_id', 'ended_at'])) {
+                $assignment->active_worker_id = $assignment->ended_at === null ? $assignment->worker_id : null;
+            }
+        });
+    }
+
     protected $fillable = [
         'work_task_id', 'worker_id', 'assigned_by', 'status', 'assignment_instructions', 'end_reason',
         'assigned_at', 'accepted_at', 'started_at', 'ended_at',

@@ -29,7 +29,13 @@ class SubmitTaskEvidenceRequest extends FormRequest
             'evidence_type' => ['required', 'in:before,progress,after'],
             'caption' => ['nullable', 'string', 'max:500'],
             'evidence' => ['required', 'array', 'min:1', 'max:5'],
-            'evidence.*' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:10240'],
+            'evidence.*' => [
+                'required',
+                'file',
+                'mimes:jpg,jpeg,png,webp,pdf',
+                'extensions:jpg,jpeg,png,webp,pdf',
+                'max:10240',
+            ],
         ];
     }
 }

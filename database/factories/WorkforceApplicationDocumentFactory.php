@@ -2,11 +2,11 @@
 
 namespace Database\Factories;
 
-use App\Models\WorkforceApplicationDocument;
-use App\Models\WorkforceApplication;
 use App\Models\User;
-use Illuminate\Support\Str;
+use App\Models\WorkforceApplication;
+use App\Models\WorkforceApplicationDocument;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
  * @extends Factory<WorkforceApplicationDocument>
@@ -23,7 +23,7 @@ class WorkforceApplicationDocumentFactory extends Factory
         return [
             'workforce_application_id' => WorkforceApplication::factory(),
             'uploaded_by' => User::factory(),
-            'storage_disk' => 'local',
+            'storage_disk' => 'private',
             'storage_path' => 'workforce-applications/'.Str::uuid().'/supporting-document.pdf',
             'original_name' => 'supporting-document.pdf',
             'mime_type' => 'application/pdf',

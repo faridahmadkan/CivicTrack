@@ -3,9 +3,9 @@
 namespace Database\Factories;
 
 use App\Models\TaskAssignment;
+use App\Models\TaskEvidence;
 use App\Models\User;
 use App\Models\WorkTask;
-use App\Models\TaskEvidence;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -24,7 +24,7 @@ class TaskEvidenceFactory extends Factory
             'work_task_id' => WorkTask::factory(),
             'task_assignment_id' => TaskAssignment::factory(),
             'uploaded_by' => User::factory(),
-            'storage_disk' => 'local',
+            'storage_disk' => 'private',
             'storage_path' => 'task-evidence/factory/evidence.jpg',
             'original_name' => 'evidence.jpg',
             'mime_type' => 'image/jpeg',

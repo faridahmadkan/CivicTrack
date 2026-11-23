@@ -10,7 +10,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class WorkTask extends Model
 {
@@ -42,9 +41,9 @@ class WorkTask extends Model
         return $this->hasMany(TaskAssignment::class)->orderBy('assigned_at')->orderBy('id');
     }
 
-    public function activeAssignment(): HasOne
+    public function activeAssignments(): HasMany
     {
-        return $this->hasOne(TaskAssignment::class)->whereNull('ended_at');
+        return $this->hasMany(TaskAssignment::class)->whereNull('ended_at')->orderBy('assigned_at')->orderBy('id');
     }
 
     public function updates(): HasMany

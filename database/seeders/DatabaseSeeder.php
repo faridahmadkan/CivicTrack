@@ -19,5 +19,9 @@ class DatabaseSeeder extends Seeder
             RegistrationControlSeeder::class,
             ServiceCategorySeeder::class,
         ]);
+
+        if (app()->environment(['local', 'testing']) && config('civictrack.demo.enabled')) {
+            $this->call(DemoSeeder::class);
+        }
     }
 }

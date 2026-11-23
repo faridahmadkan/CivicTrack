@@ -6,16 +6,11 @@ use App\Enums\TaskAssignmentStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SubmitTaskEvidenceRequest;
 use App\Http\Requests\WorkerTaskUpdateRequest;
-use App\Models\TaskEvidence;
-use App\Models\TaskUpdate;
-use App\Models\User;
 use App\Models\WorkTask;
 use App\Services\TaskAssignmentService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TaskController extends Controller
 {
@@ -46,10 +41,10 @@ class TaskController extends Controller
     {
         $this->authorize('view', $workTask);
         $workTask->load([
-            'workOrder.report.category', 'activeAssignment.assigner', 'updates.actor',
+            'workOrder.report.category', 'activeAssignments.assigner', 'updates.actor',
             'verifications.reviewer', 'dependencies',
         ]);
-        $assignment = $workTask->activeAssignment;
+        $assignment = $workTask->activeAssignments->firstWhere('worker_id', auth()->id());
 
         abort_unless($assignment !== null && $assignment->worker_id === auth()->id(), 404);
         $evidence = $workTask->evidence()->where('task_assignment_id', $assignment->id)->get();
@@ -120,25 +115,5 @@ class TaskController extends Controller
         $service->submitForVerification($workTask, $request->user());
 
         return to_route('worker.tasks.show', $workTask)->with('status', 'Task submitted to staff for verification.');
-    }
-
-    public function downloadEvidence(Request $request, WorkTask $workTask, TaskEvidence $evidence): StreamedResponse
-    {
-        $this->authorize('view', $workTask);
-        $assignment = $workTask->activeAssignment;
-        abort_unless(
-            $assignment !== null
-                && $assignment->worker_id === $request->user()->id
-                && $evidence->work_task_id === $workTask->id
-                && $evidence->task_assignment_id === $assignment->id,
-            404,
-        );
-        abort_unless(Storage::disk($evidence->storage_disk)->exists($evidence->storage_path), 404);
-
-        return Storage::disk($evidence->storage_disk)->download(
-            $evidence->storage_path,
-            $evidence->original_name,
-            ['Content-Type' => $evidence->mime_type, 'X-Content-Type-Options' => 'nosniff'],
-        );
     }
 }

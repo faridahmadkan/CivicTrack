@@ -22,7 +22,7 @@ class WorkforceApplicationSubmissionTest extends TestCase
 
     public function test_open_staff_application_is_private_and_does_not_grant_workforce_access(): void
     {
-        Storage::fake('local');
+        Storage::fake('private');
         $this->seed();
         RegistrationControl::query()->where('context', 'staff')->update(['enabled' => true]);
 
@@ -60,7 +60,7 @@ class WorkforceApplicationSubmissionTest extends TestCase
         ]);
 
         $storedDocument = WorkforceApplicationDocument::query()->firstOrFail();
-        Storage::disk('local')->assertExists($storedDocument->storage_path);
+        Storage::disk('private')->assertExists($storedDocument->storage_path);
         $this->assertArrayNotHasKey('storage_path', $storedDocument->toArray());
         $this->assertSame(1, AuditEvent::query()->count());
 
@@ -74,7 +74,7 @@ class WorkforceApplicationSubmissionTest extends TestCase
 
     public function test_closed_workforce_registration_creates_no_application_or_document(): void
     {
-        Storage::fake('local');
+        Storage::fake('private');
         $this->seed();
         RegistrationControl::query()->where('context', 'worker')->update(['enabled' => false]);
 

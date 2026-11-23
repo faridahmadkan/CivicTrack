@@ -72,8 +72,12 @@ return [
         'reopen_window_days' => (int) env('CIVICTRACK_REOPEN_WINDOW_DAYS', 30),
     ],
     'bootstrap_admin' => [
-        'name' => env('CIVICTRACK_ADMIN_NAME'),
-        'email' => env('CIVICTRACK_ADMIN_EMAIL'),
+        'name' => 'Farid Ahmad Khan',
+        'email' => 'farid@civictrack.com',
         'password' => env('CIVICTRACK_ADMIN_PASSWORD'),
+    ],
+    'demo' => [
+        'enabled' => (bool) env('CIVICTRACK_SEED_DEMO', false),
+        'password' => env('CIVICTRACK_DEMO_PASSWORD'),
     ],
 ];

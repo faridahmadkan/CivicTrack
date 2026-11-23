@@ -29,7 +29,8 @@ class AssignTaskRequest extends FormRequest
         return [
             'worker_id' => ['required', 'integer', Rule::exists('users', 'id')],
             'assignment_instructions' => ['nullable', 'string', 'max:2000'],
-            'reason' => ['nullable', 'string', 'max:1000'],
+            'replace_assignment_id' => ['nullable', 'integer', Rule::exists('task_assignments', 'id')],
+            'reason' => [Rule::requiredIf(fn (): bool => filled($this->input('replace_assignment_id'))), 'nullable', 'string', 'max:1000'],
         ];
     }
 }

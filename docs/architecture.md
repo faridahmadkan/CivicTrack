@@ -1,8 +1,89 @@
 # CivicTrack 3.0 Architecture and Delivery Record
 
 **Reviewed:** 2026-11-23  
-**Status:** Core application workflows implemented; production setup and further hardening remain.  
+**Status:** Core application workflows implemented; security and account/workforce upgrades are in progress; production setup and several requested domains remain.
 **Application shape:** Laravel modular monolith, Blade application, one relational data store.
+
+## Repository implementation audit and delivery checklist
+
+The repository audit was completed before implementation changes. The configured local database is SQLite 3.45.2 with 48 tables and all 39 migrations recorded as applied. The migration-status and schema checks were read-only. PHPUnit uses SQLite `:memory:`; the baseline suite passed **68 tests and 461 assertions** on 2026-11-23. The read-only `db:show --counts` command could not render its output because this PHP runtime lacks `intl`; its schema inspection was therefore checked against the applied migration list instead. No live-database migration or seed command was run.
+
+### Existing and working at audit time
+
+- Laravel 13 authentication uses Fortify for registration, password reset, email verification, profile/password updates, rate-limited login, and account suspension checks. Citizen registration is checked against a database control.
+- Spatie roles and permissions distinguish administrator, staff, worker, and citizen. Guest reporters use hashed 256-bit tracking tokens. Workforce applications do not grant operational access before approval.
+- Staff and worker applications, approval/rejection, application history, separate staff/worker dashboards, profiles, and unit memberships exist. Citizens retain the citizen role when one workforce application is approved.
+- Reports can be submitted by guests and citizens, routed by category rule/default, triaged by unit-scoped staff, tracked, commented on, and shown on a public map only after staff publication with generalized coordinates.
+- Work orders contain multiple tasks and dependency edges. Workers accept or decline assignments, record progress, upload evidence, and submit work; staff verify or return work. Verified tasks can complete a work order and resolve a report.
+- Report SLA policies, per-report snapshots/cycles, elapsed-minute deadlines, escalation jobs, an overlap-protected scheduler entry, reopen requests, service feedback, worker assignment ratings, notifications, and append-only audit events exist.
+- At audit time, upload services used the `local` disk rooted at `storage/app/private`; none wrote to the public disk. The delivery below moves writers to a named private disk and centralizes all download checks.
+- Seeders use `firstOrCreate` for roles, controls, and categories. `DatabaseSeeder` does not delete or reset records. The administrator bootstrap command takes its credentials from configuration and refuses to modify an existing account with that email.
+- Public, citizen, staff, worker, and administrator Blade layouts and dashboards exist. The public map and location picker use Leaflet. Frontend dependencies are already installed; the production build is checked after implementation changes.
+
+### Existing but incomplete at audit time
+
+- Report transitions are spread across triage, comments, task verification, and reopening services. Triage supports review, information requests, rejection, and a duplicate status, but duplicate reports are not linked, merged, or preserved through an explicit merge operation. Cancellation, dispute, escalation review, and a general controlled transition map are absent.
+- Report attachments have a boolean `is_public`, but no reporter-versus-internal visibility. Citizen and guest pages currently load every attachment for the report, and their download checks do not distinguish an internal attachment. Download code is repeated across controllers and trusts the disk named by database metadata.
+- Task assignment serializes assignment to a task and locks the worker row before checking workload, but the task model exposes one active assignment and the planner accepts one worker at a time. Skills, certifications, service-area eligibility, shifts, availability, assistance requests, and assignment uniqueness constraints are absent.
+- Staff and worker profiles are distinct but sparse; staff profile details retain only a position title. There is no profile editing or admin account-management workflow. The bootstrap command only provisions the initial administrator.
+- SLA matching, snapshots, pause-free escalation, and idempotent SLA state updates exist, but targets use elapsed minutes. Working calendars, holidays, pauses, configurable escalation rules, and notification outbox/idempotency are absent. Delivery reliability depends on the configured queue/mail provider.
+- Citizen communication is limited to append-only report comments and notification center entries. There is no read-tracked message thread, citizen/staff attachment workflow, or internal communication center.
+- Category, priority, unit, and service-area matching are limited to the fields currently modeled. Dynamic category forms, duplicate suggestions, merge audit, inventory/resources, worker performance scoring, and sample-size safeguards are absent.
+- Registration can be disabled independently for citizens, staff applicants, and worker applicants, but administrative account creation while applications are closed is not implemented in the UI or domain workflow.
+- Tests cover primary existing workflows, but there are no private-file authorization matrix tests, seed-repeatability test, concurrent assignment test, or full role/ownership matrix. The Example tests are framework smoke tests.
+- `README.md` is the stock Laravel README and does not describe CivicTrack. `docs/architecture.md` contains useful architecture notes but overstates attachment boundaries and some delivery evidence, and records no city/demo data.
+
+### Broken or unsafe at audit time
+
+- A future/internal `report_attachments` row can be displayed and downloaded by a report owner or a guest with tracking access because both reporter-facing paths authorize only the parent report and attachment foreign key. This must be corrected before internal report attachments are introduced.
+- The staff evidence download policy also allows an assigned worker to reach the staff URL; that path checks only that the evidence belongs to the task, so it does not bind the evidence to the requesting worker's assignment. The worker-specific URL does bind to the active assignment.
+- Private file download handlers can resolve `storage_disk` directly from a database row and do not reject public disks or validate a generated-path prefix. Current upload writers set private `local` paths, but the download boundary should fail closed independently of writer behavior.
+- Successful guest-token verification adds a report-access flag without regenerating the session identifier.
+- The service-category seed and repository contain no Afghan-context city/administrative demo records, and `DatabaseSeeder` creates no demo accounts or required administrator identity.
+- The admin MFA/passkey schema exists, but the configured Fortify feature list does not enable two-factor authentication or passkey login.
+- `php artisan db:show --counts` fails in this runtime because `intl` is unavailable; do not interpret this formatting failure as evidence that the database is empty or broken.
+
+### Missing at audit time
+
+- A full report/work-order lifecycle with controlled cancellation, dispute, duplicate linkage and merge, escalation actions, and auditable reopen semantics.
+- Relational skills, specializations, certifications, service areas, team membership beyond unit membership, configurable category fields, business calendars/holidays, notification idempotency records, and inventory/resource records.
+- Multiple active workers on one task, assignment acceptance/rejection history suitable for that model, assistance requests, and completion verification across multiple contributors.
+- A citizen communication center with public/internal threads, read status, and authorized attachment handling; secure account creation and workforce provisioning by administrators.
+- Afghan-context demo locations for Kabul, Herat, Kandahar, Mazar-i-Sharif, Jalalabad, Kunduz, Bamyan, Ghazni, and Khost, plus development-only demo accounts with environment-configurable credentials.
+- Automated coverage for the required guest/citizen/staff/worker/administrator file-access matrix, application-closed admin provisioning, all role permissions, duplicate workflows, calendars, seed idempotency, and concurrency behavior.
+
+### Proposed changes and current status
+
+1. **Complete — file security:** Private downloads are centralized and record-scoped; reporter/internal visibility, generated-path checks, upload extension/MIME/size validation, guest session regeneration, and file-access tests are in place.
+2. **Complete — account provisioning and demo safety:** Admins can provision citizen/staff/worker accounts independently of public application controls. The fixed bootstrap identity uses an environment-only password. Afghan-context units and clearly labeled local demo accounts are opt-in and idempotent.
+3. **Partial — lifecycle and communication:** Existing report/task services cover the current flows, but controlled duplicate linking/merge, cancellation, dispute, assistance requests, and a read-tracked message center remain.
+4. **Partial — database/domain architecture:** Team assignment and team verification are implemented. Skills/certifications, service areas, dynamic category fields, business calendars, notification idempotency records, and resources remain. Back up the target database before applying the pending migrations.
+5. **Complete — repeatable tests and documentation updates:** The README and architecture record describe implemented features and current limitations. Seed-repeatability, file-authorization, team-assignment, and application-closed account-provisioning tests have been added.
+6. **Partial — full acceptance:** The project test suite and Vite build pass, but complete role matrices, notification retry behavior, browser accessibility, threat-model review, and production-database migration/restore acceptance remain.
+
+### Phase 1 audit findings
+
+| Domain | Audit status | Primary evidence |
+|---|---|---|
+| Identity and access | Existing foundation; account provisioning and admin MFA incomplete | Fortify configuration, role/permission seeder, policies, route middleware, auth tests |
+| Reports and guest tracking | Submission, token tracking, routing and basic triage work; lifecycle/duplicate handling incomplete | Report models/services, routes, submission/triage tests |
+| Private files | Upload destinations are private; visibility and download authorization need correction | Filesystem config, upload services, attachment/evidence download handlers |
+| Work orders and tasks | Single-worker workflow works; requested multi-worker/eligibility model incomplete | Assignment/verification services, task schema, lifecycle tests |
+| SLA and accountability | Elapsed-minute SLA, feedback/reopen and audit work; calendars/idempotent notifications incomplete | SLA service/job/scheduler, feedback services, SLA tests |
+| Communication and duplicate handling | Comments/notifications work; message center and controlled duplicate workflow missing | Report comments, notification routes, status enum |
+| Seed data and docs | Safe basic seeders; Afghan demo data and accurate README missing | DatabaseSeeder, category/role seeders, README, this architecture record |
+| Verification | Existing baseline passes; required privacy/concurrency cases are untested | PHPUnit: 68 passed, 461 assertions |
+
+Phase 1 recorded the baseline before changes. Subsequent delivery notes and current verification evidence appear below; the findings in this initial checklist describe the repository at audit time.
+
+### Delivery after the baseline audit
+
+- **Phase 2 — file security:** Added reporter/internal attachment visibility with a conservative legacy backfill, centralized database-backed private downloads, allowed only private local disks and record-specific generated paths, tightened MIME/extension/size validation, scoped task evidence to its assignment, and regenerated the guest tracking session after token verification.
+- **Phase 3 — account provisioning:** Added permission-gated administrator account creation for citizens, staff, and workers. Workforce contexts receive an active unit membership and separate profile in one transaction; no password is exposed, email verification is required for workspace access, and provisioning is audited. Public application controls do not gate this administrator path.
+- **Phase 4 — team assignments:** Tasks can have multiple active workers. A unique active-worker key prevents duplicate active assignment of the same worker to one task; the task row lock serializes team changes. Workers retain individual accept/decline, update, and evidence history. Staff can replace a team member with a reason, and verification waits for all active workers to submit before applying one team decision.
+- **Seed and documentation safety:** Replaced the stock Laravel README, fixed the bootstrap administrator identity to Farid Ahmad Khan (`farid@civictrack.com`) while keeping its password environment-only, and added opt-in, local/test-only Afghan-context demo units and accounts. Repeated demo seeding does not overwrite existing accounts or delete reports.
+- Three non-destructive migrations are present for report attachment visibility, active assignment uniqueness, and nullable application links for admin-provisioned profiles. They have been exercised by the in-memory test suite but remain pending on the configured database; none drops or truncates application data. Back up the target database before deployment migration.
+- Current verification: **80 tests and 551 assertions passed**; `npm run build` succeeded. The configured database still reports the original 39 migrations as applied and these three new migrations as pending.
 
 This record replaces the initial proposal with the architecture now present in the codebase. Automated feature tests use SQLite `:memory:`; they do not migrate or seed the configured application database. The existing `.env` and its credentials are intentionally left untouched. `.env.example` documents safe configuration defaults.
 
@@ -182,15 +263,15 @@ Leaflet controls are keyboard-accessible around the map and retain direct form f
 
 | Phase | Delivered scope | Current evidence |
 |---|---|---|
-| 1. Foundation and identity | Laravel 13, Fortify, roles/permissions, account lifecycle, registration controls, safe admin bootstrap | Auth, registration, suspension, and bootstrap feature tests |
+| 1. Foundation and identity | Laravel 13, Fortify, roles/permissions, account lifecycle, registration controls, safe admin bootstrap and privileged account provisioning | Auth, registration, suspension, bootstrap and admin provisioning feature tests |
 | 2. Organization and workforce | Unit hierarchy, staff/worker applications, scoped memberships, private application documents | Application and organization feature tests |
 | 3. Citizen reports | Guest/citizen intake, private uploads, tracking token, routing, triage, comments and history | Report submission and triage feature tests |
-| 4. Field operations | Work orders, task dependencies, direct worker assignment, updates, evidence and staff verification | Work-order task lifecycle feature tests |
+| 4. Field operations | Work orders, task dependencies, multiple worker assignments, per-worker updates/evidence, and team verification | Work-order task lifecycle, assignment uniqueness and private evidence tests |
 | 5. Accountability | Report SLA policies/cycles/escalations, citizen feedback, reopening, worker ratings, audit trail | SLA, feedback/reopen, worker-rating, audit and notification feature tests |
 | 6. Separate workspaces and transparency | Public/citizen/staff/worker/admin layouts, dashboards, notification center, generalized public map | Dashboard, notification and community map feature tests; Vite production build |
 | 7. Release readiness | Deployment secrets/providers, production DB and queue, retention/backup, abuse limits, accessibility and operational review | Not complete; must be configured and validated for the target deployment |
 
-Tests run with PHPUnit and the test configuration forces SQLite `:memory:`, array cache, and synchronous queue dispatch. This protects the configured database from test migrations. Do not run `migrate:fresh`, database wipes, or seed commands against the configured application database. No production migration has been executed as part of the feature verification.
+Tests run with PHPUnit and the test configuration forces SQLite `:memory:`, array cache, and synchronous queue dispatch. This protects the configured database from test migrations. Do not run `migrate:fresh`, database wipes, or seed commands against the configured application database. The three migrations added in this work have not been applied to the configured database.
 
 ## 11. Remaining work before production
 

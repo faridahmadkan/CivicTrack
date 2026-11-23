@@ -7,13 +7,10 @@ use App\Enums\WorkforceApplicationType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ReviewWorkforceApplicationRequest;
 use App\Models\WorkforceApplication;
-use App\Models\WorkforceApplicationDocument;
 use App\Services\WorkforceApplicationService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class WorkforceApplicationController extends Controller
 {
@@ -69,20 +66,5 @@ class WorkforceApplicationController extends Controller
 
         return to_route('admin.workforce-applications.show', $workforceApplication)
             ->with('status', 'Application status updated. The applicant will be notified.');
-    }
-
-    public function downloadDocument(WorkforceApplicationDocument $document): StreamedResponse
-    {
-        $this->authorize('review', $document->application);
-
-        abort_unless(Storage::disk($document->storage_disk)->exists($document->storage_path), 404);
-
-        $response = Storage::disk($document->storage_disk)->download(
-            $document->storage_path,
-            $document->original_name,
-            ['Content-Type' => $document->mime_type, 'X-Content-Type-Options' => 'nosniff'],
-        );
-
-        return $response;
     }
 }

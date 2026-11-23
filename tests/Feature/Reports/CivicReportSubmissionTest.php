@@ -21,7 +21,7 @@ class CivicReportSubmissionTest extends TestCase
 
     public function test_guest_can_submit_and_track_a_private_report_with_a_hashed_access_code(): void
     {
-        Storage::fake('local');
+        Storage::fake('private');
         $this->seed();
         $category = ServiceCategory::query()->where('code', 'ROAD')->firstOrFail();
         $document = UploadedFile::fake()->create('crossing.jpg', 100, 'image/jpeg');
@@ -60,7 +60,7 @@ class CivicReportSubmissionTest extends TestCase
         $this->assertSame(hash('sha256', $token), $storedToken->token_hash);
 
         $attachment = ReportAttachment::query()->firstOrFail();
-        Storage::disk('local')->assertExists($attachment->storage_path);
+        Storage::disk('private')->assertExists($attachment->storage_path);
         $this->assertArrayNotHasKey('storage_path', $attachment->toArray());
         $this->assertDatabaseCount('audit_events', 2);
 

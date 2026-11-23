@@ -1,58 +1,62 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# CivicTrack
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+CivicTrack is a Laravel 13 service-reporting and field-operations application. It supports public and registered-citizen reporting, department-scoped staff work, field-worker task workflows, and administrator configuration.
 
-## About Laravel
+## Implemented workflows
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Guests submit reports and receive a one-time access code for protected tracking. Registered citizens can submit and follow their own reports.
+- Staff review and route reports within their organization-unit scope. Administrators can configure units, categories, registration controls, and report SLA policies.
+- Staff and field workers use separate workspaces and permissions. Applicants receive no operational role until approved; administrators can also provision active staff and worker accounts directly.
+- A work order can contain multiple tasks and dependencies. A task can have a team of workers, retains assignment history, and waits for every active team member to submit before staff can verify the task.
+- Report attachments, workforce documents, and task evidence are stored privately and served through authenticated, record-scoped download routes. Reporter-facing report pages only expose reporter-visible attachments.
+- Reports retain status history, public or internal comments, routing decisions, elapsed-minute SLA records, escalations, reopening requests, citizen feedback, audit events, and account notifications.
+- The public community map shows only staff-published reports with generalized coordinates.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+The application does not yet implement work-calendar SLA calculations, holidays or paused SLA timers, a read-tracked message center, controlled duplicate linking and merge, worker skills/certifications, configurable service-area boundaries, dynamic category fields, inventory, or statistical worker performance scoring. See [docs/architecture.md](docs/architecture.md) for the audit record, data model, security boundaries, and release limitations.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Requirements
 
-## Learning Laravel
+- PHP 8.5 with the extensions required by Laravel and the installed Composer packages.
+- A supported relational database. Automated tests use SQLite in memory.
+- Node.js and npm for the Vite frontend build.
+- A configured mail provider, queue worker, and Laravel scheduler for production notifications and SLA escalation.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Local setup
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+For a new checkout:
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+composer install
+npm ci
+npm run build
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Create `.env` from `.env.example` only if this checkout does not already have an `.env`; preserve any existing credentials. Run `php artisan key:generate` only for a new installation whose `APP_KEY` is empty. Configure the database, mail, queue, session, and cache settings there, then run the additive migrations:
 
-## Contributing
+```bash
+php artisan migrate --no-interaction
+php artisan db:seed --no-interaction
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+For an existing database, take and verify a backup before applying migrations. Never use `migrate:fresh`, `db:wipe`, or destructive seed logic with application data. The committed seeders use `firstOrCreate` and do not delete users or reports.
 
-## Code of Conduct
+The required initial administrator identity is **Farid Ahmad Khan** (`farid@civictrack.com`). After migrations and base role seeding, set `CIVICTRACK_ADMIN_PASSWORD` to a strong, temporary secret in protected environment configuration and run:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+php artisan civictrack:bootstrap-admin --no-interaction
+```
 
-## Security Vulnerabilities
+The command creates that administrator only if the email does not already exist and refuses to change an existing account. Remove the bootstrap password from the environment after creation. Regular administrator provisioning can create citizen, staff, and field-worker accounts without opening public registration or applications; those accounts receive password setup and email verification instructions.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Fictional Afghan-context development units can be seeded by setting `CIVICTRACK_SEED_DEMO=true` in a local or test environment. A demo password of at least 16 characters must be provided as `CIVICTRACK_DEMO_PASSWORD` before labeled demo accounts are created. Demo users use `@civictrack.test` addresses. Demo seeding is not enabled in production and never updates existing account passwords. Do not put production credentials in demo settings.
 
-## License
+To run the application locally, use the project's configured development scripts or run the Laravel server, queue worker, and scheduler as separate processes.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Verification
+
+```bash
+php artisan test --compact
+npm run build
+```
+
+The test configuration uses SQLite `:memory:` and does not migrate or seed the configured application database. The current automated suite does not replace deployment-database backup, restore, accessibility, or production mail/queue checks.

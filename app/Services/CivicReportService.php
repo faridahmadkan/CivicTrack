@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\CivicReportPriority;
 use App\Enums\CivicReportStatus;
 use App\Enums\PermissionName;
+use App\Enums\ReportAttachmentVisibility;
 use App\Enums\ReportCommentVisibility;
 use App\Enums\RoleName;
 use App\Events\CivicReportStatusChanged;
@@ -111,7 +112,7 @@ class CivicReportService
             });
         } catch (Throwable $exception) {
             if ($storedPaths !== []) {
-                Storage::disk('local')->delete($storedPaths);
+                Storage::disk('private')->delete($storedPaths);
             }
 
             throw $exception;
@@ -291,7 +292,7 @@ class CivicReportService
     /** @param array<int, string> $storedPaths */
     private function storeAttachment(CivicReport $report, ?User $reporter, UploadedFile $document, array &$storedPaths): void
     {
-        $path = $document->store('civic-reports/'.$report->id, 'local');
+        $path = $document->store('civic-reports/'.$report->id, 'private');
 
         if ($path === false) {
             throw new RuntimeException('The report attachment could not be stored.');
@@ -307,13 +308,14 @@ class CivicReportService
         $originalName = preg_replace('/[\x00-\x1F\x7F]/u', '', basename($document->getClientOriginalName())) ?: 'attachment';
         $report->attachments()->create([
             'uploaded_by' => $reporter?->id,
-            'storage_disk' => 'local',
+            'storage_disk' => 'private',
             'storage_path' => $path,
             'original_name' => Str::limit($originalName, 180, ''),
             'mime_type' => $document->getMimeType() ?? 'application/octet-stream',
             'size_bytes' => $document->getSize() ?? 0,
             'sha256' => $hash,
             'is_public' => false,
+            'visibility' => ReportAttachmentVisibility::Reporter,
         ]);
     }
 

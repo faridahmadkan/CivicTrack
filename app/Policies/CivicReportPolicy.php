@@ -5,8 +5,8 @@ namespace App\Policies;
 use App\Enums\PermissionName;
 use App\Enums\RoleName;
 use App\Models\CivicReport;
-use App\Models\User;
 use App\Models\UnitMembership;
+use App\Models\User;
 
 class CivicReportPolicy
 {
@@ -52,6 +52,15 @@ class CivicReportPolicy
         return $user->can(PermissionName::ReportsManageAll->value)
             || ($user->can(PermissionName::ReportsViewDepartment->value)
                 && $this->isStaffMemberOfUnit($user, $civicReport->routed_unit_id));
+    }
+
+    /** Determine whether the user can view internal report attachments. */
+    public function viewInternalAttachments(User $user, CivicReport $civicReport): bool
+    {
+        return $user->isActive()
+            && ($user->can(PermissionName::ReportsManageAll->value)
+                || ($user->can(PermissionName::ReportsViewDepartment->value)
+                    && $this->isStaffMemberOfUnit($user, $civicReport->routed_unit_id)));
     }
 
     private function isStaffMemberOfUnit(User $user, ?int $organizationUnitId): bool

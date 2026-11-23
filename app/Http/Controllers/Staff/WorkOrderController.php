@@ -10,8 +10,8 @@ use App\Models\CivicReport;
 use App\Models\User;
 use App\Models\WorkOrder;
 use App\Services\WorkOrderService;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -40,7 +40,7 @@ class WorkOrderController extends Controller
     {
         $this->authorize('view', $workOrder);
         $workOrder->load([
-            'report.category', 'organizationUnit', 'tasks.activeAssignment.worker', 'tasks.dependencies',
+            'report.category', 'organizationUnit', 'tasks.activeAssignments.worker', 'tasks.dependencies',
             'tasks.assignments.worker', 'tasks.assignments.workerRating.reviewer', 'tasks.updates.actor',
             'tasks.verifications.reviewer', 'tasks.evidence',
         ]);

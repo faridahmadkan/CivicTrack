@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ReportAttachmentVisibility;
 use Database\Factories\ReportAttachmentFactory;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,7 +16,7 @@ class ReportAttachment extends Model
     use HasFactory;
 
     protected $fillable = [
-        'civic_report_id', 'uploaded_by', 'storage_disk', 'storage_path', 'original_name', 'mime_type', 'size_bytes', 'sha256', 'is_public',
+        'civic_report_id', 'uploaded_by', 'storage_disk', 'storage_path', 'original_name', 'mime_type', 'size_bytes', 'sha256', 'is_public', 'visibility',
     ];
 
     public function report(): BelongsTo
@@ -30,6 +31,9 @@ class ReportAttachment extends Model
 
     protected function casts(): array
     {
-        return ['is_public' => 'boolean'];
+        return [
+            'is_public' => 'boolean',
+            'visibility' => ReportAttachmentVisibility::class,
+        ];
     }
 }

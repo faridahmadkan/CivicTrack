@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Models\WorkerProfile;
 use App\Models\WorkOrder;
 use App\Models\WorkTask;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -28,7 +29,7 @@ class WorkOrderTaskLifecycleTest extends TestCase
 
     public function test_multi_task_work_order_requires_worker_evidence_and_staff_verification_before_resolution(): void
     {
-        Storage::fake('local');
+        Storage::fake('private');
         $this->seed();
         [$report, $staff, $unit] = $this->createAcknowledgedReportAndStaff();
 
@@ -73,22 +74,54 @@ class WorkOrderTaskLifecycleTest extends TestCase
             'membership_type' => WorkforceApplicationType::Worker,
             'status' => WorkforceMembershipStatus::Active,
         ]);
+        $secondWorker = User::factory()->create();
+        $secondWorker->assignRole(RoleName::Worker->value);
+        WorkerProfile::factory()->create(['user_id' => $secondWorker->id]);
+        UnitMembership::factory()->create([
+            'user_id' => $secondWorker->id,
+            'organization_unit_id' => $unit->id,
+            'membership_type' => WorkforceApplicationType::Worker,
+            'status' => WorkforceMembershipStatus::Active,
+        ]);
 
         $this->actingAs($staff)
             ->post(route('staff.tasks.assign', $firstTask), [
                 'worker_id' => $worker->id,
                 'assignment_instructions' => 'Use the marked safety kit.',
             ])
+            ->assertRedirect(route('staff.work-orders.show', $workOrder))
             ->assertSessionHasNoErrors();
 
         $assignment = TaskAssignment::query()->where('work_task_id', $firstTask->id)->firstOrFail();
         $this->assertSame(TaskAssignmentStatus::Assigned, $assignment->status);
         $this->assertSame(CivicReportStatus::InProgress, $report->fresh()->status);
 
+        $this->actingAs($staff)
+            ->post(route('staff.tasks.assign', $firstTask), [
+                'worker_id' => $secondWorker->id,
+                'assignment_instructions' => 'Work with the assigned safety lead.',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertCount(2, $firstTask->fresh()->activeAssignments);
+        $this->actingAs($staff)
+            ->post(route('staff.tasks.assign', $firstTask), ['worker_id' => $worker->id])
+            ->assertSessionHasErrors('worker_id');
+        $this->assertDatabaseCount('task_assignments', 2);
+        $this->actingAs($staff)
+            ->get(route('staff.work-orders.show', $workOrder))
+            ->assertOk()
+            ->assertSee($worker->name)
+            ->assertSee($secondWorker->name)
+            ->assertSee('Add or replace a worker');
+
         $this->actingAs($worker)
             ->post(route('worker.tasks.accept', $firstTask))
             ->assertSessionHasNoErrors();
         $this->post(route('worker.tasks.start', $firstTask))->assertSessionHasNoErrors();
+        $this->post(route('worker.tasks.updates.store', $firstTask), [
+            'body' => 'The site is secured and work has started.',
+        ])->assertSessionHasNoErrors();
         $this->get(route('worker.tasks.show', $firstTask))
             ->assertOk()
             ->assertSee(route('worker.tasks.index'))
@@ -99,8 +132,23 @@ class WorkOrderTaskLifecycleTest extends TestCase
             'evidence' => [UploadedFile::fake()->create('site-before.jpg', 100, 'image/jpeg')],
         ])->assertSessionHasNoErrors();
 
-        Storage::disk('local')->assertExists(TaskEvidence::query()->firstOrFail()->storage_path);
+        Storage::disk('private')->assertExists(TaskEvidence::query()->firstOrFail()->storage_path);
 
+        $this->post(route('worker.tasks.submit', $firstTask))->assertSessionHasNoErrors();
+        $this->assertSame(WorkTaskStatus::InProgress, $firstTask->fresh()->status);
+        $this->actingAs($staff)
+            ->put(route('staff.tasks.verify', $firstTask), ['decision' => 'approved'])
+            ->assertSessionHasErrors('decision');
+
+        $this->actingAs($secondWorker)
+            ->post(route('worker.tasks.accept', $firstTask))
+            ->assertSessionHasNoErrors();
+        $this->post(route('worker.tasks.start', $firstTask))->assertSessionHasNoErrors();
+        $this->post(route('worker.tasks.evidence.store', $firstTask), [
+            'evidence_type' => 'after',
+            'caption' => 'The second worker confirmed the repair.',
+            'evidence' => [UploadedFile::fake()->create('site-check.jpg', 100, 'image/jpeg')],
+        ])->assertSessionHasNoErrors();
         $this->post(route('worker.tasks.submit', $firstTask))->assertSessionHasNoErrors();
         $this->assertSame(WorkTaskStatus::SubmittedForReview, $firstTask->fresh()->status);
 
@@ -110,12 +158,12 @@ class WorkOrderTaskLifecycleTest extends TestCase
 
         $this->assertSame(WorkTaskStatus::Completed, $firstTask->fresh()->status);
         $this->assertSame(CivicReportStatus::InProgress, $report->fresh()->status);
-        $this->assertDatabaseCount('task_verifications', 1);
+        $this->assertDatabaseCount('task_verifications', 2);
 
         $this->actingAs($staff)
             ->post(route('staff.tasks.assign', $secondTask), ['worker_id' => $worker->id])
             ->assertSessionHasNoErrors();
-        $this->assertSame(TaskAssignmentStatus::Assigned, $secondTask->fresh()->activeAssignment->status);
+        $this->assertSame(TaskAssignmentStatus::Assigned, $secondTask->fresh()->activeAssignments->first()->status);
 
         $this->actingAs($worker)
             ->post(route('worker.tasks.accept', $secondTask))
@@ -194,6 +242,70 @@ class WorkOrderTaskLifecycleTest extends TestCase
         $this->assertSame(WorkTaskStatus::Queued, $task->fresh()->status);
     }
 
+    public function test_declined_assignments_keep_history_and_can_be_replaced_with_a_reason(): void
+    {
+        $this->seed();
+        [$report, $staff, $unit] = $this->createAcknowledgedReportAndStaff();
+        $workOrder = WorkOrder::factory()->create([
+            'civic_report_id' => $report->id,
+            'organization_unit_id' => $unit->id,
+        ]);
+        $task = WorkTask::factory()->create(['work_order_id' => $workOrder->id]);
+        $firstWorker = $this->createWorkerForUnit($unit);
+        $secondWorker = $this->createWorkerForUnit($unit);
+
+        $this->actingAs($staff)
+            ->post(route('staff.tasks.assign', $task), ['worker_id' => $firstWorker->id])
+            ->assertSessionHasNoErrors();
+        $firstAssignment = TaskAssignment::query()->where('worker_id', $firstWorker->id)->firstOrFail();
+
+        $this->actingAs($firstWorker)
+            ->post(route('worker.tasks.decline', $task), ['body' => 'I am unavailable for this shift.'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame(TaskAssignmentStatus::Declined, $firstAssignment->fresh()->status);
+        $this->assertNull($firstAssignment->fresh()->active_worker_id);
+        $this->assertSame(WorkTaskStatus::Queued, $task->fresh()->status);
+
+        $this->actingAs($staff)
+            ->post(route('staff.tasks.assign', $task), ['worker_id' => $secondWorker->id])
+            ->assertSessionHasNoErrors();
+        $secondAssignment = TaskAssignment::query()->where('worker_id', $secondWorker->id)->firstOrFail();
+
+        $this->actingAs($staff)
+            ->post(route('staff.tasks.assign', $task), [
+                'worker_id' => $firstWorker->id,
+                'replace_assignment_id' => $secondAssignment->id,
+            ])
+            ->assertSessionHasErrors('reason');
+
+        $this->actingAs($staff)
+            ->post(route('staff.tasks.assign', $task), [
+                'worker_id' => $firstWorker->id,
+                'replace_assignment_id' => $secondAssignment->id,
+                'reason' => 'The second worker became unavailable.',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(TaskAssignmentStatus::Reassigned, $secondAssignment->fresh()->status);
+        $this->assertNotNull($secondAssignment->fresh()->ended_at);
+        $this->assertSame($firstWorker->id, $task->fresh()->activeAssignments->first()->worker_id);
+        $this->assertDatabaseCount('task_assignments', 3);
+    }
+
+    public function test_database_constraint_prevents_duplicate_active_assignment_for_the_same_worker_and_task(): void
+    {
+        $this->seed();
+        $task = WorkTask::factory()->create();
+        $firstWorker = User::factory()->create();
+        $secondWorker = User::factory()->create();
+
+        TaskAssignment::factory()->create(['work_task_id' => $task->id, 'worker_id' => $firstWorker->id]);
+        TaskAssignment::factory()->create(['work_task_id' => $task->id, 'worker_id' => $secondWorker->id]);
+
+        $this->expectException(QueryException::class);
+        TaskAssignment::factory()->create(['work_task_id' => $task->id, 'worker_id' => $firstWorker->id]);
+    }
+
     /** @return array{CivicReport, User, OrganizationUnit} */
     private function createAcknowledgedReportAndStaff(): array
     {
@@ -213,5 +325,20 @@ class WorkOrderTaskLifecycleTest extends TestCase
         ]);
 
         return [$report, $staff, $unit];
+    }
+
+    private function createWorkerForUnit(OrganizationUnit $unit): User
+    {
+        $worker = User::factory()->create();
+        $worker->assignRole(RoleName::Worker->value);
+        WorkerProfile::factory()->create(['user_id' => $worker->id]);
+        UnitMembership::factory()->create([
+            'user_id' => $worker->id,
+            'organization_unit_id' => $unit->id,
+            'membership_type' => WorkforceApplicationType::Worker,
+            'status' => WorkforceMembershipStatus::Active,
+        ]);
+
+        return $worker;
     }
 }

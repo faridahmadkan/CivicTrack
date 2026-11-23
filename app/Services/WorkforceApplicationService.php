@@ -32,8 +32,8 @@ class WorkforceApplicationService
     ) {}
 
     /**
-     * @param array{position_title: string, requested_unit_id: int|string, experience_summary?: string|null, qualification_summary?: string|null} $attributes
-     * @param array<int, UploadedFile> $documents
+     * @param  array{position_title: string, requested_unit_id: int|string, experience_summary?: string|null, qualification_summary?: string|null}  $attributes
+     * @param  array<int, UploadedFile>  $documents
      */
     public function submit(User $applicant, WorkforceApplicationType $type, array $attributes, array $documents): WorkforceApplication
     {
@@ -103,7 +103,7 @@ class WorkforceApplicationService
             });
         } catch (Throwable $exception) {
             if ($storedPaths !== []) {
-                Storage::disk('local')->delete($storedPaths);
+                Storage::disk('private')->delete($storedPaths);
             }
 
             throw $exception;
@@ -176,8 +176,8 @@ class WorkforceApplicationService
     }
 
     /**
-     * @param array{additional_information: string} $attributes
-     * @param array<int, UploadedFile> $documents
+     * @param  array{additional_information: string}  $attributes
+     * @param  array<int, UploadedFile>  $documents
      */
     public function provideRequestedInformation(
         WorkforceApplication $application,
@@ -192,7 +192,7 @@ class WorkforceApplicationService
                 $application = WorkforceApplication::query()->lockForUpdate()->findOrFail($application->id);
 
                 if (! $application->isOwnedBy($applicant)) {
-                    throw new ModelNotFoundException();
+                    throw new ModelNotFoundException;
                 }
 
                 if ($application->status !== WorkforceApplicationStatus::InformationRequested) {
@@ -229,7 +229,7 @@ class WorkforceApplicationService
             });
         } catch (Throwable $exception) {
             if ($storedPaths !== []) {
-                Storage::disk('local')->delete($storedPaths);
+                Storage::disk('private')->delete($storedPaths);
             }
 
             throw $exception;
@@ -237,7 +237,7 @@ class WorkforceApplicationService
     }
 
     /**
-     * @param array<int, string> $storedPaths
+     * @param  array<int, string>  $storedPaths
      */
     private function storeDocument(
         WorkforceApplication $application,
@@ -245,7 +245,7 @@ class WorkforceApplicationService
         UploadedFile $document,
         array &$storedPaths,
     ): WorkforceApplicationDocument {
-        $path = $document->store('workforce-applications/'.$application->id, 'local');
+        $path = $document->store('workforce-applications/'.$application->id, 'private');
 
         if ($path === false) {
             throw new RuntimeException('The application document could not be stored.');
@@ -262,7 +262,7 @@ class WorkforceApplicationService
 
         return $application->documents()->create([
             'uploaded_by' => $uploader->id,
-            'storage_disk' => 'local',
+            'storage_disk' => 'private',
             'storage_path' => $path,
             'original_name' => Str::limit($originalName, 180, ''),
             'mime_type' => $document->getMimeType() ?? 'application/octet-stream',

@@ -9,14 +9,11 @@ use App\Http\Requests\ProvideWorkforceInformationRequest;
 use App\Http\Requests\StoreWorkforceApplicationRequest;
 use App\Models\OrganizationUnit;
 use App\Models\WorkforceApplication;
-use App\Models\WorkforceApplicationDocument;
 use App\Services\RegistrationControlService;
 use App\Services\WorkforceApplicationService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class WorkforceApplicationController extends Controller
 {
@@ -92,19 +89,5 @@ class WorkforceApplicationController extends Controller
 
         return to_route('workforce.applications.show', $workforceApplication)
             ->with('status', 'Your additional information has been sent for review.');
-    }
-
-    public function downloadDocument(Request $request, WorkforceApplicationDocument $document): StreamedResponse
-    {
-        abort_unless($document->application->isOwnedBy($request->user()), 404);
-        $this->authorize('view', $document->application);
-
-        abort_unless(Storage::disk($document->storage_disk)->exists($document->storage_path), 404);
-
-        return Storage::disk($document->storage_disk)->download(
-            $document->storage_path,
-            $document->original_name,
-            ['Content-Type' => $document->mime_type, 'X-Content-Type-Options' => 'nosniff'],
-        );
     }
 }
