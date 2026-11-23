@@ -1,0 +1,55 @@
+@import 'tailwindcss';
+
+@source '../../resources/views/**/*.blade.php';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@theme {
+    --font-sans: 'Inter', 'Segoe UI', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+    --color-forest-950: #102a25;
+    --color-forest-900: #173a32;
+    --color-forest-800: #205044;
+    --color-forest-700: #286957;
+    --color-forest-600: #347e67;
+    --color-forest-100: #e5f1eb;
+    --color-forest-50: #f2f8f4;
+    --color-sand-50: #fbfaf6;
+    --color-sand-100: #f4f1e9;
+    --color-slate-900: #172722;
+    --color-slate-700: #40564e;
+    --color-slate-600: #5f726b;
+    --color-slate-500: #788982;
+    --color-line: #dfe7e1;
+    --color-coral-600: #b74f3f;
+}
+
+@layer base {
+    :root {
+        color-scheme: light;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+        @apply bg-sand-50 font-sans text-slate-900 antialiased;
+    }
+
+    a,
+    button,
+    input {
+        @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700;
+    }
+}
+
+.report-map {
+    min-height: 22rem;
+    isolation: isolate;
+    z-index: 0;
+}
+
+.report-map .leaflet-control-attribution {
+    font-size: 10px;
+}
